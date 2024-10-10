@@ -3,6 +3,7 @@ import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem,
 import { useHistory } from 'react-router-dom';
 import axios from 'axios';
 import IceCream from '../interfaces/IceCream';
+import NotificationComponent from '../components/Notification';
 
 const Master: React.FC = () => {
     const [iceCreams, setIceCreams] = React.useState<IceCream[]>([]);
@@ -41,6 +42,7 @@ const Master: React.FC = () => {
                             </IonItem>
                         ))}
                     </IonList>)}
+                    <NotificationComponent />
             </IonContent>
         </IonPage>
     );
