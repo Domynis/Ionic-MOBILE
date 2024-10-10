@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonSpinner } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
 import axios from 'axios';
+import IceCream from '../interfaces/IceCream';
 
 const Master: React.FC = () => {
     const [iceCreams, setIceCreams] = React.useState<IceCream[]>([]);
