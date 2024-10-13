@@ -32,23 +32,25 @@ import '@ionic/react/css/palettes/dark.system.css';
 
 /* Theme variables */
 import './theme/variables.css';
-import Master from './pages/Master';
-import Detail from './pages/Detail';
+import { IceCreamProvider } from './state/IceCreamProvider';
+import IceCreamList from './pages/IceCreamList';
+import IceCream from './pages/IceCream';
+import IceCreamEdit from './pages/IceCreamEdit';
 
 setupIonicReact();
 
 const App: React.FC = () => (
   <IonApp>
-    <IonReactRouter>
-      <IonRouterOutlet>
-        <Route exact path="/">
-          <Master />
-        </Route>
-        <Route exact path="/detail/:id">
-          <Detail />
-        </Route>
-      </IonRouterOutlet>
-    </IonReactRouter>
+    <IceCreamProvider>
+      <IonReactRouter>
+        <IonRouterOutlet>
+          <Route path="/icecreams" component={IceCreamList} exact={true}/>
+          <Route path="/icecream" component={IceCreamEdit} exact={true}/>
+          <Route path="/icecream/:id" component={IceCreamEdit} exact={true}/>
+          <Route exact path="/" render={() => <Redirect to="/icecreams"/>}/>
+        </IonRouterOutlet>
+      </IonReactRouter>
+    </IceCreamProvider>
   </IonApp>
 );
 
