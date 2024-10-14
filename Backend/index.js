@@ -81,6 +81,7 @@ const createItem = async (ctx) => {
   }
   item.id = `${parseInt(lastId) + 1}`;
   lastId = item.id;
+  item.description = item.description || "description " + item.id;
   icecreams.push(item);
   ctx.response.body = item;
   ctx.response.status = 201; // CREATED

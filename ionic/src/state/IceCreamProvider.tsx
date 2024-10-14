@@ -40,14 +40,14 @@ const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
             case FETCH_ITEMS_STARTED:
                 return { ...state, fetching: true, fetchingError: null };
             case FETCH_ITEMS_SUCCEEDED:
-                return { ...state, items: payload, fetching: false };
+                return { ...state, items: payload.items, fetching: false };
             case FETCH_ITEMS_FAILED:
                 return { ...state, fetchingError: payload, fetching: false };
             case SAVE_ITEM_STARTED:
                 return { ...state, savingError: null, saving: true };
             case SAVE_ITEM_SUCCEEDED:
                 const items = [...(state.items || [])];
-                const item = payload;
+                const item = payload.item;
                 const index = items.findIndex(it => it.id === item.id);
                 if (index === -1) {
                     items.splice(0, 0, item);
@@ -71,6 +71,7 @@ interface IceCreamProviderProps {
 export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) => {
     const [state, dispatch] = React.useReducer(reducer, initialState);
     const { items, fetching, fetchingError, saving, savingError } = state;
+
     useEffect(getIceCreamsEffect, []);
     useEffect(wsEffect, []);
     const saveItem = useCallback<SaveItemFn>(saveIceCreamCallback, []);
@@ -112,7 +113,7 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
             dispatch({ type: SAVE_ITEM_STARTED });
             const savedIceCream = await (iceCream.id ? updateIceCream(iceCream) : createIceCream(iceCream));
             log('saveIceCream succeeded');
-            dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: {iceCream: savedIceCream} });
+            dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: {item: savedIceCream} });
         } catch (error) {
             log('saveIceCream failed');
             dispatch({ type: SAVE_ITEM_FAILED, payload: {error} });
@@ -127,7 +128,7 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
                 return;
             }
             const { event, payload: {item}} = message;
-            log(`ws message, icecream ${event}`);
+            log(`ws message, icecream ${event}, ${item.id}`);
             if (event === 'created' || event === 'updated') {
                 dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: {item} });
             }

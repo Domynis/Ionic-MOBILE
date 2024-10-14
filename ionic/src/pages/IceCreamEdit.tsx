@@ -3,19 +3,21 @@ import { getLogger } from "../core";
 import { IceCreamContext } from "../state/IceCreamProvider";
 import { useCallback, useContext, useEffect, useState } from "react";
 import IceCreamProps from "../interfaces/IceCream";
-import { IonButton, IonButtons, IonContent, IonHeader, IonInput, IonLoading, IonPage, IonTitle, IonToolbar } from "@ionic/react";
+import { IonButton, IonButtons, IonContent, IonHeader, IonInput, IonLoading, IonPage, IonText, IonTitle, IonToolbar } from "@ionic/react";
 import { iceCream } from "ionicons/icons";
 
 const log = getLogger('IceCreamEdit');
 
 interface IceCreamEditProps extends RouteComponentProps<{
-    id: string;
+    id?: string;
 }> { }
 
 const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
     const { items, saving, savingError, saveItem } = useContext(IceCreamContext);
     const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
     const [icecream, setIceCream] = useState<IceCreamProps>();
+
     useEffect(() => {
         log('useEffect');
         const routeId = match.params.id || '';
@@ -23,12 +25,15 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
         setIceCream(item);
         if (item) {
             setName(item.name);
+            if (item.description) {
+                setDescription(item.description);
+            }
         }
     }, [match.params.id, items]);
     const handleSave = useCallback(() => {
-        const editedIceCream = iceCream ? { ...icecream, name } : { name };
+        const editedIceCream = iceCream ? { ...icecream, name, description } : { name, description };
         saveItem && saveItem(editedIceCream).then(() => history.goBack());
-    }, [icecream, saveItem, name, history]);
+    }, [icecream, saveItem, name, description, history]);
     log('render');
     return (
         <IonPage>
@@ -41,7 +46,10 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
                 </IonToolbar>
             </IonHeader>
             <IonContent>
+                <IonText>Name:</IonText>
                 <IonInput value={name} onIonChange={e => setName(e.detail.value || '')} />
+                <IonText>Description:</IonText>
+                <IonInput value={description} onIonChange={e => setDescription(e.detail.value || '')} />
                 <IonLoading isOpen={saving} />
                 {savingError && (
                     <div>{savingError.message || 'Failed to save item!'}</div>
