@@ -1,0 +1,16 @@
+Features
+1. Master-Detail Interface
+
+    Displays a list of ice cream entries on the main page.
+    Each ice cream entry includes a name and description.
+    Users can click on any entry to edit its details in a dedicated form.
+
+2. REST API Integration
+
+    Fetches the list of ice creams from a backend API using REST endpoints.
+    Supports creating new ice cream entries and updating existing ones via API calls.
+
+3. Real-Time WebSocket Notifications
+
+    The app listens for real-time updates from the server using WebSockets.
+    When new ice cream entries are created or updated, the app receives a notification and updates the list accordingly.
