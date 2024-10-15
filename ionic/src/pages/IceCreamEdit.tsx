@@ -13,10 +13,17 @@ interface IceCreamEditProps extends RouteComponentProps<{
 }> { }
 
 const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
-    const { items, saving, savingError, saveItem } = useContext(IceCreamContext);
+    const { items, saving, savingError, saveItem, setEditing } = useContext(IceCreamContext);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [icecream, setIceCream] = useState<IceCreamProps>();
+
+    useEffect(() => {
+        setEditing && setEditing(true);
+        return () => {
+            setEditing && setEditing(false);
+        };
+    }, [setEditing]);
 
     useEffect(() => {
         log('useEffect');
@@ -32,7 +39,9 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
     }, [match.params.id, items]);
     const handleSave = useCallback(() => {
         const editedIceCream = iceCream ? { ...icecream, name, description } : { name, description };
-        saveItem && saveItem(editedIceCream).then(() => history.goBack());
+        saveItem && saveItem(editedIceCream).then(() => {
+            history.goBack();
+        });
     }, [icecream, saveItem, name, description, history]);
     log('render');
     return (

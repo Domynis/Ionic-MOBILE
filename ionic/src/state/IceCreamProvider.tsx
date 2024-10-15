@@ -15,6 +15,8 @@ export interface IceCreamsState {
     saving: boolean;
     savingError?: Error | null;
     saveItem?: SaveItemFn;
+    editing: boolean;
+    setEditing?: (editing: boolean) => void;
 }
 
 interface ActionProps {
@@ -25,6 +27,7 @@ interface ActionProps {
 const initialState: IceCreamsState = {
     fetching: false,
     saving: false,
+    editing: false,
 };
 
 const FETCH_ITEMS_STARTED = 'FETCH_ITEMS_STARTED';
@@ -33,6 +36,7 @@ const FETCH_ITEMS_FAILED = 'FETCH_ITEMS_FAILED';
 const SAVE_ITEM_STARTED = 'SAVE_ITEM_STARTED';
 const SAVE_ITEM_SUCCEEDED = 'SAVE_ITEM_SUCCEEDED';
 const SAVE_ITEM_FAILED = 'SAVE_ITEM_FAILED';
+const SET_EDITING = 'SET_EDITING';
 
 const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
     (state, { type, payload }) => {
@@ -57,6 +61,8 @@ const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
                 return { ...state, items, saving: false };
             case SAVE_ITEM_FAILED:
                 return { ...state, savingError: payload, saving: false };
+            case SET_EDITING:
+                return { ...state, editing: payload.editing };
             default:
                 return state;
         }
@@ -70,12 +76,17 @@ interface IceCreamProviderProps {
 
 export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) => {
     const [state, dispatch] = React.useReducer(reducer, initialState);
-    const { items, fetching, fetchingError, saving, savingError } = state;
+    const { items, fetching, fetchingError, saving, savingError, editing } = state;
+
+    const setEditing = useCallback((isEditing: boolean) => {
+        dispatch({ type: 'SET_EDITING', payload: {editing: isEditing} });
+    }, []);
 
     useEffect(getIceCreamsEffect, []);
-    useEffect(wsEffect, []);
+    useEffect(wsEffect, [editing]);
+
     const saveItem = useCallback<SaveItemFn>(saveIceCreamCallback, []);
-    const value = { items, fetching, fetchingError, saving, savingError, saveItem };
+    const value = { items, fetching, fetchingError, saving, savingError, saveItem, editing, setEditing };
     log('returns');
     return (
         <IceCreamContext.Provider value={value}>
@@ -124,7 +135,7 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
         let canceled = false;
         log('wsEffect - connecting');
         const closeWebSocket = newWebSocket(message => {
-            if (canceled) {
+            if (canceled || editing) {
                 return;
             }
             const { event, payload: {item}} = message;
