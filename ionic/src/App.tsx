@@ -34,21 +34,27 @@ import './theme/variables.css';
 import { IceCreamProvider } from './state/IceCreamProvider';
 import IceCreamList from './pages/IceCreamList';
 import IceCreamEdit from './pages/IceCreamEdit';
+import { AuthProvider } from './auth/AuthProvider';
+import { Login } from './pages/Login';
+import { PrivateRoute } from './auth/PrivateRoute';
 
 setupIonicReact();
 
 const App: React.FC = () => (
   <IonApp>
-    <IceCreamProvider>
-      <IonReactRouter>
-        <IonRouterOutlet>
-          <Route path="/icecreams" component={IceCreamList} exact={true}/>
-          <Route path="/icecream" component={IceCreamEdit} exact={true}/>
-          <Route path="/icecream/:id" component={IceCreamEdit} exact={true}/>
-          <Route exact path="/" render={() => <Redirect to="/icecreams"/>}/>
-        </IonRouterOutlet>
-      </IonReactRouter>
-    </IceCreamProvider>
+    <IonReactRouter>
+      <IonRouterOutlet>
+        <AuthProvider>
+          <Route path="/login" component={Login} exact={true} />
+          <IceCreamProvider>
+            <PrivateRoute path="/icecreams" component={IceCreamList} exact={true} />
+            <PrivateRoute path="/icecream" component={IceCreamEdit} exact={true} />
+            <PrivateRoute path="/icecream/:id" component={IceCreamEdit} exact={true} />
+          </IceCreamProvider>
+          <Route exact path="/" render={() => <Redirect to="/icecreams" />} />
+        </AuthProvider>
+      </IonRouterOutlet>
+    </IonReactRouter>
   </IonApp>
 );
 
