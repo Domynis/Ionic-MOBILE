@@ -54,7 +54,9 @@ const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
                 const item = payload.item;
                 const index = items.findIndex(it => it.id === item.id);
                 if (index === -1) {
-                    items.splice(0, 0, item);
+                    // items.splice(0, 0, item);
+                    // add new item to the end
+                    items.push(item);
                 } else {
                     items[index] = item;
                 }
@@ -82,7 +84,7 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
         dispatch({ type: 'SET_EDITING', payload: {editing: isEditing} });
     }, []);
 
-    useEffect(getIceCreamsEffect, []);
+    useEffect(getIceCreamsEffect, [editing]);
     useEffect(wsEffect, [editing]);
 
     const saveItem = useCallback<SaveItemFn>(saveIceCreamCallback, []);
@@ -95,6 +97,9 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
     );
 
     function getIceCreamsEffect() {
+        if(editing) {
+            return;
+        }
         let canceled = false;
         fetchIceCreams();
         return () => {
