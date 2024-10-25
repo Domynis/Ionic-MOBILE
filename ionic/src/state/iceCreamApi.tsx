@@ -1,34 +1,8 @@
 import axios from "axios";
-import { getLogger } from "../core";
+import { baseUrl, config, getLogger, iceCreamsUrl, withLogs } from "../core";
 import IceCreamProps from "../interfaces/IceCream";
 
 const log = getLogger('IceCreamApi');
-
-const baseUrl = 'localhost:3000';
-const iceCreamsUrl = `http://${baseUrl}/icecreams`;
-
-interface ResponseProps<T> {
-    data: T;
-}
-
-function withLogs<T>(promise: Promise<ResponseProps<T>>, fnName: string): Promise<T> {
-    log(`${fnName} - started`);
-    return promise
-        .then(response => {
-            log(`${fnName} - succeeded`);
-            return Promise.resolve(response.data);
-        })
-        .catch(error => {
-            log(`${fnName} - failed`);
-            return Promise.reject(error);
-        });
-}
-
-const config = {
-    headers: {
-        'Content-Type': 'application/json',
-    },
-};
 
 export const getIceCreams: () => Promise<IceCreamProps[]> = () => {
     return withLogs(axios.get(iceCreamsUrl, config), 'getIceCreams');
