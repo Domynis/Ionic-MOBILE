@@ -1,6 +1,6 @@
-interface IceCream {
-    id: number;
+interface IceCreamProps {
+    id?: string;
     name: string;
-    description: string;
+    description?: string;
 }
-export default IceCream;
+export default IceCreamProps;
