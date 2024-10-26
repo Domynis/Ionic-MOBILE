@@ -45,8 +45,8 @@ iceCreamRouter.get('/:id', async (ctx) => {
     const userId = ctx.state.user._id;
     const iceCream = await iceCreamStore.findOne({ _id: ctx.params.id });
 
-    if(iceCream) {
-        if(iceCream.userId !== userId) {
+    if (iceCream) {
+        if (iceCream.userId !== userId) {
             ctx.response.status = 403;
         } else {
             ctx.response.body = iceCream;
@@ -64,8 +64,8 @@ const createIceCream = async (ctx, iceCream, response) => {
         iceCream.userId = userId;
         response.body = await iceCreamStore.insert(iceCream);
         response.status = 201;
-        broadcast(userId, { event: 'created', payload: { iceCream } });
-    }catch(error) {
+        broadcast(userId, { event: 'created', payload: iceCream });
+    } catch (error) {
         response.body = { message: error.message };
         response.status = 400;
     }
@@ -81,21 +81,22 @@ iceCreamRouter.put('/:id', async (ctx) => {
     const iceCreamId = iceCream._id;
     const response = ctx.response;
 
-    if(iceCreamId && id !== iceCreamId) {
+    if (iceCreamId && id !== iceCreamId) {
         response.body = { message: 'Param id and body id should be the same' };
         response.status = 400;
         return;
     }
 
-    if(!iceCreamId) {
+    if (!iceCreamId) {
         await createIceCream(ctx, iceCream, response);
         return;
     } else {
         const userId = ctx.state.user._id;
         iceCream.userId = userId;
         const updatedCount = await iceCreamStore.update({ _id: id }, iceCream);
-        if(updatedCount === 1) {
-            broadcast(userId, { event: 'updated', payload: { iceCream } });
+        if (updatedCount === 1) {
+            console.log("updated iceCream", iceCream);
+            broadcast(userId, { event: 'updated', payload: iceCream });
             response.status = 200;
             response.body = iceCream;
         } else {
@@ -110,12 +111,12 @@ iceCreamRouter.del('/:id', async (ctx) => {
     const id = ctx.params.id;
     const iceCream = await iceCreamStore.findOne({ _id: id });
 
-    if(iceCream && id === iceCream._id) {
-        if(iceCream.userId !== userId) {
+    if (iceCream && id === iceCream._id) {
+        if (iceCream.userId !== userId) {
             ctx.response.status = 403;
         } else {
             await iceCreamStore.remove({ _id: id });
-            broadcast(userId, { event: 'deleted', payload: { iceCream } });
+            broadcast(userId, { event: 'deleted', payload: iceCream });
             ctx.response.status = 204;
         }
     } else {

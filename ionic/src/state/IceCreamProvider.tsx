@@ -4,6 +4,7 @@ import IceCreamProps from "../interfaces/IceCream";
 import PropTypes, { string } from "prop-types";
 import { createIceCream, getIceCreams, newWebSocket, updateIceCream } from "./iceCreamApi";
 import { AuthContext } from "../auth/AuthProvider";
+import { useToast } from "./toastProvider";
 
 const log = getLogger('IceCreamProvider');
 
@@ -51,6 +52,7 @@ const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
             case SAVE_ITEM_STARTED:
                 return { ...state, savingError: null, saving: true };
             case SAVE_ITEM_SUCCEEDED:
+                log('SAVE_ITEM_SUCCEEDED ' + JSON.stringify(payload.item));
                 const items = [...(state.items || [])];
                 const item = payload.item;
                 const index = items.findIndex(it => it._id === item.id);
@@ -81,6 +83,7 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
     const { token } = useContext(AuthContext);
     const [state, dispatch] = React.useReducer(reducer, initialState);
     const { items, fetching, fetchingError, saving, savingError, editing } = state;
+    const { showToast } = useToast();
 
     const setEditing = useCallback((isEditing: boolean) => {
         dispatch({ type: 'SET_EDITING', payload: { editing: isEditing } });
@@ -149,13 +152,14 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
         let closeWebSocket: () => void;
         if (token?.trim()) {
             closeWebSocket = newWebSocket(token, message => {
-                if (canceled || editing) {
+                if (canceled) {
                     return;
                 }
                 const { event, payload: item } = message;
-                log(`ws message, icecream ${event}, ${item._id}`);
                 if (event === 'created' || event === 'updated') {
+                    log(`ws message, icecream ${event}, ${item._id}`);
                     dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item } });
+                    showToast(`IceCream ${item.name} ${event}`, 3000);
                 }
             });
         }

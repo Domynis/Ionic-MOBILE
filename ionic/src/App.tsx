@@ -37,6 +37,7 @@ import IceCreamEdit from './pages/IceCreamEdit';
 import { AuthProvider } from './auth/AuthProvider';
 import { Login } from './pages/Login';
 import { PrivateRoute } from './auth/PrivateRoute';
+import { ToastProvider } from './state/toastProvider';
 
 setupIonicReact();
 
@@ -46,11 +47,13 @@ const App: React.FC = () => (
       <IonRouterOutlet>
         <AuthProvider>
           <Route path="/login" component={Login} exact={true} />
-          <IceCreamProvider>
-            <PrivateRoute path="/icecreams" component={IceCreamList} exact={true} />
-            <PrivateRoute path="/icecream" component={IceCreamEdit} exact={true} />
-            <PrivateRoute path="/icecream/:id" component={IceCreamEdit} exact={true} />
-          </IceCreamProvider>
+          <ToastProvider>
+            <IceCreamProvider>
+              <PrivateRoute path="/icecreams" component={IceCreamList} exact={true} />
+              <PrivateRoute path="/icecream" component={IceCreamEdit} exact={true} />
+              <PrivateRoute path="/icecream/:id" component={IceCreamEdit} exact={true} />
+            </IceCreamProvider>
+          </ToastProvider>
           <Route exact path="/" render={() => <Redirect to="/icecreams" />} />
         </AuthProvider>
       </IonRouterOutlet>

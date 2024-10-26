@@ -1,4 +1,4 @@
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonSpinner, IonLoading, IonFab, IonFabButton, IonIcon } from '@ionic/react';
 import { add, logOut } from 'ionicons/icons';
 import { getLogger } from '../core';
@@ -11,6 +11,10 @@ const log = getLogger('IceCreamsList');
 const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
     const { logout } = useContext(AuthContext);
     const { items, fetching, fetchingError } = useContext(IceCreamContext);
+
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [showToast, setShowToast] = useState(false);
+    
     log('render');
     return (
         <IonPage>
