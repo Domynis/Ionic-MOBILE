@@ -33,7 +33,14 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-    const [state, setState] = useState<AuthState>(initialState);
+    const [state, setState] = useState<AuthState>(() => {
+        const token = localStorage.getItem('token') || '';
+        return {
+            ...initialState,
+            token,
+            isAuthenticated: !!token,
+        }
+    });
     const { isAuthenticated, isAuthenticating, authenticationError, pendingAuthentication, token } = state;
     const login = useCallback<LoginFn>(loginCallBack, []);
     useEffect(authenticationEffect, [pendingAuthentication])
@@ -77,11 +84,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 const { username, password } = state;
                 const { token } = await loginApi(username, password);
 
-                if(canceled) {
+                if (canceled) {
                     return;
                 }
 
                 log('authenticate succeeded')
+                localStorage.setItem('token', token);
                 setState({
                     ...state,
                     token,
@@ -90,7 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                     isAuthenticating: false,
                 });
             } catch (error) {
-                if(canceled) {
+                if (canceled) {
                     return;
                 }
                 log('authenticate failed');

@@ -2,7 +2,7 @@ export const getLogger: (tag: string) => (...args: any) => void =
   tag => (...args) => console.log(tag, ...args);
 
 export const baseUrl = 'localhost:3000';
-export const iceCreamsUrl = `http://${baseUrl}/icecreams`;
+export const iceCreamsUrl = `http://${baseUrl}/api/icecreams`;
 
 const log = getLogger('api');
 interface ResponseProps<T> {

@@ -1,12 +1,13 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useContext, useEffect } from "react";
 import { getLogger } from "../core";
 import IceCreamProps from "../interfaces/IceCream";
 import PropTypes, { string } from "prop-types";
 import { createIceCream, getIceCreams, newWebSocket, updateIceCream } from "./iceCreamApi";
+import { AuthContext } from "../auth/AuthProvider";
 
 const log = getLogger('IceCreamProvider');
 
-type SaveItemFn = (item: IceCreamProps) => Promise<any>;
+type SaveItemFn = (token: string, item: IceCreamProps) => Promise<any>;
 
 export interface IceCreamsState {
     items?: IceCreamProps[];
@@ -52,7 +53,7 @@ const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
             case SAVE_ITEM_SUCCEEDED:
                 const items = [...(state.items || [])];
                 const item = payload.item;
-                const index = items.findIndex(it => it.id === item.id);
+                const index = items.findIndex(it => it._id === item.id);
                 if (index === -1) {
                     // items.splice(0, 0, item);
                     // add new item to the end
@@ -77,15 +78,18 @@ interface IceCreamProviderProps {
 }
 
 export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) => {
+    const { token } = useContext(AuthContext);
     const [state, dispatch] = React.useReducer(reducer, initialState);
     const { items, fetching, fetchingError, saving, savingError, editing } = state;
 
     const setEditing = useCallback((isEditing: boolean) => {
-        dispatch({ type: 'SET_EDITING', payload: {editing: isEditing} });
+        dispatch({ type: 'SET_EDITING', payload: { editing: isEditing } });
     }, []);
 
-    useEffect(getIceCreamsEffect, [editing]);
-    useEffect(wsEffect, [editing]);
+    //TODO: handle token in provider
+
+    useEffect(getIceCreamsEffect, [editing, token]);
+    useEffect(wsEffect, [editing, token]);
 
     const saveItem = useCallback<SaveItemFn>(saveIceCreamCallback, []);
     const value = { items, fetching, fetchingError, saving, savingError, saveItem, editing, setEditing };
@@ -97,11 +101,13 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
     );
 
     function getIceCreamsEffect() {
-        if(editing) {
+        if (editing) {
             return;
         }
         let canceled = false;
-        fetchIceCreams();
+        if (token) {
+            fetchIceCreams();
+        }
         return () => {
             canceled = true;
         }
@@ -110,49 +116,53 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
             try {
                 log('fetchIceCreams started');
                 dispatch({ type: FETCH_ITEMS_STARTED });
-                const iceCreams = await getIceCreams();
+                log('fetchIceCreams with token: ' + token);
+                const iceCreams = await getIceCreams(token);
                 log('fetchIceCreams succeeded');
                 if (!canceled) {
-                    dispatch({ type: FETCH_ITEMS_SUCCEEDED, payload: {items: iceCreams} });
+                    dispatch({ type: FETCH_ITEMS_SUCCEEDED, payload: { items: iceCreams } });
                 }
             } catch (error) {
                 log('fetchIceCreams failed');
                 // if(!canceled)
-                dispatch({ type: FETCH_ITEMS_FAILED, payload: {error} });
+                dispatch({ type: FETCH_ITEMS_FAILED, payload: { error } });
             }
         }
     }
 
-    async function saveIceCreamCallback(iceCream: IceCreamProps) {
+    async function saveIceCreamCallback(token: string, iceCream: IceCreamProps) {
         try {
             log('saveIceCream started');
             dispatch({ type: SAVE_ITEM_STARTED });
-            const savedIceCream = await (iceCream.id ? updateIceCream(iceCream) : createIceCream(iceCream));
+            const savedIceCream = await (iceCream._id ? updateIceCream(token, iceCream) : createIceCream(token, iceCream));
             log('saveIceCream succeeded');
-            dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: {item: savedIceCream} });
+            dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item: savedIceCream } });
         } catch (error) {
             log('saveIceCream failed');
-            dispatch({ type: SAVE_ITEM_FAILED, payload: {error} });
+            dispatch({ type: SAVE_ITEM_FAILED, payload: { error } });
         }
     }
 
     function wsEffect() {
         let canceled = false;
         log('wsEffect - connecting');
-        const closeWebSocket = newWebSocket(message => {
-            if (canceled || editing) {
-                return;
-            }
-            const { event, payload: {item}} = message;
-            log(`ws message, icecream ${event}, ${item.id}`);
-            if (event === 'created' || event === 'updated') {
-                dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: {item} });
-            }
-        });
+        let closeWebSocket: () => void;
+        if (token?.trim()) {
+            closeWebSocket = newWebSocket(token, message => {
+                if (canceled || editing) {
+                    return;
+                }
+                const { event, payload: item } = message;
+                log(`ws message, icecream ${event}, ${item._id}`);
+                if (event === 'created' || event === 'updated') {
+                    dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item } });
+                }
+            });
+        }
         return () => {
             log('wsEffect - disconnecting');
             canceled = true;
-            closeWebSocket();
+            closeWebSocket?.();
         }
     }
 };
