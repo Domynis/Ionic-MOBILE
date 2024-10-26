@@ -13,6 +13,7 @@ export interface AuthState {
     isAuthenticated: boolean;
     isAuthenticating: boolean;
     login?: LoginFn;
+    logout?: () => void;
     pendingAuthentication?: boolean;
     username?: string;
     password?: string;
@@ -43,8 +44,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     });
     const { isAuthenticated, isAuthenticating, authenticationError, pendingAuthentication, token } = state;
     const login = useCallback<LoginFn>(loginCallBack, []);
+    const logout = useCallback(logoutCallBack, []);
     useEffect(authenticationEffect, [pendingAuthentication])
-    const value = { isAuthenticated, login, isAuthenticating, authenticationError, token };
+    const value = { isAuthenticated, login, logout, isAuthenticating, authenticationError, token };
 
     log('render')
     return (
@@ -60,6 +62,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             pendingAuthentication: true,
             username,
             password
+        });
+    }
+
+    function logoutCallBack(): void {
+        log('logout');
+        localStorage.removeItem('token');
+        setState({
+            ...state,
+            isAuthenticated: false,
+            token: '',
         });
     }
 
