@@ -5,6 +5,7 @@ import { useCallback, useContext, useEffect, useState } from "react";
 import IceCreamProps from "../interfaces/IceCream";
 import { IonButton, IonButtons, IonContent, IonHeader, IonInput, IonLoading, IonPage, IonText, IonTitle, IonToolbar } from "@ionic/react";
 import { iceCream } from "ionicons/icons";
+import { AuthContext } from "../auth/AuthProvider";
 
 const log = getLogger('IceCreamEdit');
 
@@ -13,6 +14,7 @@ interface IceCreamEditProps extends RouteComponentProps<{
 }> { }
 
 const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
+    const { token } = useContext(AuthContext);
     const { items, saving, savingError, saveItem, setEditing } = useContext(IceCreamContext);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -28,7 +30,7 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
     useEffect(() => {
         log('useEffect');
         const routeId = match.params.id || '';
-        const item = items?.find(it => it.id === routeId);
+        const item = items?.find(it => it._id === routeId);
         setIceCream(item);
         if (item) {
             setName(item.name);
@@ -38,8 +40,8 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
         }
     }, [match.params.id, items]);
     const handleSave = useCallback(() => {
-        const editedIceCream = iceCream ? { ...icecream, name, description } : { name, description };
-        saveItem && saveItem(editedIceCream).then(() => {
+        const editedIceCream = { ...icecream, name, description };
+        saveItem && saveItem(token, editedIceCream).then(() => {
             history.goBack();
         });
     }, [icecream, saveItem, name, description, history]);

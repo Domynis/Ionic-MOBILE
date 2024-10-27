@@ -1,5 +1,5 @@
 interface IceCreamProps {
-    id?: string;
+    _id?: string;
     name: string;
     description?: string;
 }

@@ -1,14 +1,20 @@
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonSpinner, IonLoading, IonFab, IonFabButton, IonIcon } from '@ionic/react';
-import { add } from 'ionicons/icons';
+import { add, logOut } from 'ionicons/icons';
 import { getLogger } from '../core';
 import { RouteComponentProps } from 'react-router';
 import { IceCreamContext } from '../state/IceCreamProvider';
 import IceCream from './IceCream';
+import { AuthContext } from '../auth/AuthProvider';
 const log = getLogger('IceCreamsList');
 
 const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
+    const { logout } = useContext(AuthContext);
     const { items, fetching, fetchingError } = useContext(IceCreamContext);
+
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [showToast, setShowToast] = useState(false);
+    
     log('render');
     return (
         <IonPage>
@@ -21,14 +27,19 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
                 <IonLoading isOpen={fetching} message="Fetching items" />
                 {items && (
                     <IonList>
-                        {items.map(({ id, name, description }) => (
-                            <IceCream key={id} id={id} name={name} onEdit={id => history.push(`/icecream/${id}`)} description={description} />
+                        {items.map(({ _id, name, description }) => (
+                            <IceCream key={_id} _id={_id} name={name} onEdit={id => history.push(`/icecream/${id}`)} description={description} />
                         ))}
                     </IonList>
                 )}
                 {fetchingError && (
                     <div>{fetchingError.message || 'Failed to fetch items!'}</div>
                 )}
+                <IonFab vertical="bottom" horizontal="start" slot="fixed">
+                    <IonFabButton onClick={logout}>
+                        <IonIcon icon={logOut} />
+                    </IonFabButton>
+                </IonFab>
                 <IonFab vertical="bottom" horizontal="end" slot="fixed">
                     <IonFabButton onClick={() => history.push('/icecream')}>
                         <IonIcon icon={add} />

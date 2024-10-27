@@ -1,58 +1,31 @@
 import axios from "axios";
-import { getLogger } from "../core";
+import { authConfig, baseUrl, config, getLogger, iceCreamsUrl, withLogs } from "../core";
 import IceCreamProps from "../interfaces/IceCream";
 
 const log = getLogger('IceCreamApi');
 
-const baseUrl = 'localhost:3000';
-const iceCreamsUrl = `http://${baseUrl}/icecreams`;
-
-interface ResponseProps<T> {
-    data: T;
-}
-
-function withLogs<T>(promise: Promise<ResponseProps<T>>, fnName: string): Promise<T> {
-    log(`${fnName} - started`);
-    return promise
-        .then(response => {
-            log(`${fnName} - succeeded`);
-            return Promise.resolve(response.data);
-        })
-        .catch(error => {
-            log(`${fnName} - failed`);
-            return Promise.reject(error);
-        });
-}
-
-const config = {
-    headers: {
-        'Content-Type': 'application/json',
-    },
+export const getIceCreams: (token: string) => Promise<IceCreamProps[]> = (token) => {
+    return withLogs(axios.get(iceCreamsUrl, authConfig(token)), 'getIceCreams');
 };
 
-export const getIceCreams: () => Promise<IceCreamProps[]> = () => {
-    return withLogs(axios.get(iceCreamsUrl, config), 'getIceCreams');
+export const createIceCream: (token: string, item: IceCreamProps) => Promise<IceCreamProps[]> = (token, item) => {
+    return withLogs(axios.post(iceCreamsUrl, item, authConfig(token)), 'createIceCream');
 };
 
-export const createIceCream: (item: IceCreamProps) => Promise<IceCreamProps[]> = item => {
-    return withLogs(axios.post(iceCreamsUrl, item, config), 'createIceCream');
-};
-
-export const updateIceCream: (item: IceCreamProps) => Promise<IceCreamProps[]> = item => {
-    return withLogs(axios.put(`${iceCreamsUrl}/${item.id}`, item, config), 'updateIceCream');
+export const updateIceCream: (token: string, item: IceCreamProps) => Promise<IceCreamProps[]> = (token, item) => {
+    return withLogs(axios.put(`${iceCreamsUrl}/${item._id}`, item, authConfig(token)), 'updateIceCream');
 };
 
 interface MessageData {
     event: string;
-    payload: {
-        item: IceCreamProps;
-    };
+    payload: IceCreamProps;
 }
 
-export const newWebSocket = (onMessage: (data: MessageData) => void) => {
+export const newWebSocket = (token: string, onMessage: (data: MessageData) => void) => {
     const ws = new WebSocket(`ws://${baseUrl}`);
     ws.onopen = () => {
         log('ws open');
+        ws.send(JSON.stringify({ type: 'authorization', payload: { token } }));
     };
     ws.onclose = () => {
         log('ws closed');
