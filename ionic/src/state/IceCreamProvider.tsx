@@ -5,8 +5,12 @@ import PropTypes, { string } from "prop-types";
 import { createIceCream, getIceCreams, newWebSocket, updateIceCream } from "./iceCreamApi";
 import { AuthContext } from "../auth/AuthProvider";
 import { useToast } from "./toastProvider";
+import { Preferences } from "@capacitor/preferences";
+import { useNetwork } from "./useNetwork";
 
 const log = getLogger('IceCreamProvider');
+
+const OFFLINE_ICECREAMS_KEY = "offline-icecreams";
 
 type SaveItemFn = (token: string, item: IceCreamProps) => Promise<any>;
 
@@ -19,6 +23,7 @@ export interface IceCreamsState {
     saveItem?: SaveItemFn;
     editing: boolean;
     setEditing?: (editing: boolean) => void;
+    syncing: boolean;
 }
 
 interface ActionProps {
@@ -30,6 +35,7 @@ const initialState: IceCreamsState = {
     fetching: false,
     saving: false,
     editing: false,
+    syncing: false
 };
 
 const FETCH_ITEMS_STARTED = 'FETCH_ITEMS_STARTED';
@@ -39,6 +45,8 @@ const SAVE_ITEM_STARTED = 'SAVE_ITEM_STARTED';
 const SAVE_ITEM_SUCCEEDED = 'SAVE_ITEM_SUCCEEDED';
 const SAVE_ITEM_FAILED = 'SAVE_ITEM_FAILED';
 const SET_EDITING = 'SET_EDITING';
+const SYNC_ITEMS = 'SYNC_ITEMS';
+
 
 const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
     (state, { type, payload }) => {
@@ -55,7 +63,7 @@ const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
                 log('SAVE_ITEM_SUCCEEDED ' + JSON.stringify(payload.item));
                 const items = [...(state.items || [])];
                 const item = payload.item;
-                const index = items.findIndex(it => it._id === item.id);
+                const index = items.findIndex(it => it._id === item._id);
                 if (index === -1) {
                     // items.splice(0, 0, item);
                     // add new item to the end
@@ -68,6 +76,8 @@ const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
                 return { ...state, savingError: payload, saving: false };
             case SET_EDITING:
                 return { ...state, editing: payload.editing };
+            case SYNC_ITEMS:
+                return { ...state, syncing: payload };
             default:
                 return state;
         }
@@ -82,20 +92,51 @@ interface IceCreamProviderProps {
 export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) => {
     const { token } = useContext(AuthContext);
     const [state, dispatch] = React.useReducer(reducer, initialState);
-    const { items, fetching, fetchingError, saving, savingError, editing } = state;
+    const { items, fetching, fetchingError, saving, savingError, editing, syncing } = state;
     const { showToast } = useToast();
+    const { networkStatus } = useNetwork();
 
     const setEditing = useCallback((isEditing: boolean) => {
         dispatch({ type: 'SET_EDITING', payload: { editing: isEditing } });
     }, []);
 
-    //TODO: handle token in provider
 
-    useEffect(getIceCreamsEffect, [editing, token]);
-    useEffect(wsEffect, [editing, token]);
+    useEffect(getIceCreamsEffect, [token]);
+    useEffect(wsEffect, [token]);
 
-    const saveItem = useCallback<SaveItemFn>(saveIceCreamCallback, []);
-    const value = { items, fetching, fetchingError, saving, savingError, saveItem, editing, setEditing };
+    useEffect(() => {
+        if (networkStatus.connected && !syncing) {
+            syncOfflineData();
+        }
+        async function syncOfflineData() {
+            const { value } = await Preferences.get({ key: OFFLINE_ICECREAMS_KEY });
+            if (!value) return;
+
+            dispatch({ type: SYNC_ITEMS, payload: true });
+            log('syncOfflineData started');
+            const offlineItems = JSON.parse(value);
+            log('syncOfflineData ', offlineItems);
+            for (const item of offlineItems) {
+                try {
+                    log('syncOfflineData item', item);
+                    await (item._id ? updateIceCream(token, item) : createIceCream(token, item));
+                    // dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item } });
+                } catch (error) {
+                    log('syncOfflineData failed ', error);
+                    showToast('Failed to sync some items. They will remain offline.', 3000);
+                    dispatch({ type: SYNC_ITEMS, payload: false });
+                    return;
+                }
+            }
+
+            await Preferences.remove({ key: OFFLINE_ICECREAMS_KEY });
+            showToast('All offline items synced.', 3000);
+            dispatch({ type: SYNC_ITEMS, payload: false });
+        };
+    }, [networkStatus.connected])
+
+    const saveItem = useCallback<SaveItemFn>(saveIceCreamCallback, [networkStatus.connected, Preferences]);
+    const value = { items, fetching, fetchingError, saving, savingError, saveItem, editing, setEditing, syncing };
     log('returns');
     return (
         <IceCreamContext.Provider value={value}>
@@ -103,12 +144,15 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
         </IceCreamContext.Provider>
     );
 
+
+
     function getIceCreamsEffect() {
         if (editing) {
             return;
         }
         let canceled = false;
         if (token) {
+            log('getIceCreamsEffect - fetching items');
             fetchIceCreams();
         }
         return () => {
@@ -119,7 +163,6 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
             try {
                 log('fetchIceCreams started');
                 dispatch({ type: FETCH_ITEMS_STARTED });
-                log('fetchIceCreams with token: ' + token);
                 const iceCreams = await getIceCreams(token);
                 log('fetchIceCreams succeeded');
                 if (!canceled) {
@@ -134,17 +177,46 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
     }
 
     async function saveIceCreamCallback(token: string, iceCream: IceCreamProps) {
+        const storeOfflineItem = async (item: IceCreamProps) => {
+            dispatch({ type: SAVE_ITEM_STARTED });
+            const { value } = await Preferences.get({ key: OFFLINE_ICECREAMS_KEY });
+            const offlineItems = value ? JSON.parse(value) : [];
+            offlineItems.push(item);
+            log('storeOfflineItem ', item);
+            log('storeOfflineItems ', offlineItems);
+            
+            dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item } });
+            await Preferences.set({ key: OFFLINE_ICECREAMS_KEY, value: JSON.stringify(offlineItems) });
+        }
         try {
             log('saveIceCream started');
             dispatch({ type: SAVE_ITEM_STARTED });
-            const savedIceCream = await (iceCream._id ? updateIceCream(token, iceCream) : createIceCream(token, iceCream));
-            log('saveIceCream succeeded');
-            dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item: savedIceCream } });
+            if (networkStatus.connected) {
+                try {
+                    log('saveIceCream online');
+                    const savedIceCream = await (iceCream._id ? updateIceCream(token, iceCream) : createIceCream(token, iceCream));
+                    log('saveIceCream succeeded');
+                    dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item: savedIceCream } });
+                } catch (error) {
+                    log('saveIceCream offline');
+                    storeOfflineItem(iceCream);
+                    showToast('Failed to save IceCream. It will be saved offline.', 3000);
+                    dispatch({ type: SAVE_ITEM_FAILED, payload: { error } });
+                }
+            } else {
+                log('saveIceCream offline');
+                storeOfflineItem(iceCream);
+                showToast('No internet connection. IceCream will be saved offline.', 3000);
+                dispatch({ type: SAVE_ITEM_FAILED, payload: {} });
+
+            }
         } catch (error) {
             log('saveIceCream failed');
             dispatch({ type: SAVE_ITEM_FAILED, payload: { error } });
         }
     }
+
+
 
     function wsEffect() {
         let canceled = false;
@@ -158,7 +230,7 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
                 const { event, payload: item } = message;
                 if (event === 'created' || event === 'updated') {
                     log(`ws message, icecream ${event}, ${item._id}`);
-                    dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item } });
+                    // dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item } });
                     showToast(`IceCream ${item.name} ${event}`, 3000);
                 }
             });

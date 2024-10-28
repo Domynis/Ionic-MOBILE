@@ -9,12 +9,14 @@ interface IceCreamPropsExt extends IceCreamProps {
     onEdit: (id?: string) => void;
 }
 
-const IceCream: React.FC<IceCreamPropsExt> = ({ _id: id, name, description, onEdit }) => {
+const IceCream: React.FC<IceCreamPropsExt> = ({ _id: id, name, description, price, tasty, onEdit }) => {
     log('render');
     return (
         <IonItem onClick={() => onEdit(id)}>
             <IonLabel>{name}</IonLabel>
             <IonLabel>{description}</IonLabel>
+            <IonLabel>{price}</IonLabel>
+            <IonLabel>{tasty ? "Tasty!" : "Not Tasty!"}</IonLabel>
         </IonItem>
     );
 };
