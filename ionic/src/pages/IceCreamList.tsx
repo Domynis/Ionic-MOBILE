@@ -30,8 +30,8 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
                 <IonLoading isOpen={fetching} message="Fetching items" />
                 {items && (
                     <IonList>
-                        {items.map(({ _id, name, description }) => (
-                            <IceCream key={_id} _id={_id} name={name} onEdit={id => history.push(`/icecream/${id}`)} description={description} />
+                        {items.map(({ _id, name, description, price, tasty }) => (
+                            <IceCream key={_id} _id={_id} name={name} onEdit={id => history.push(`/icecream/${id}`)} description={description} price={price} tasty={tasty} />
                         ))}
                     </IonList>
                 )}

@@ -1,6 +1,8 @@
 import axios from "axios";
 import { authConfig, baseUrl, config, getLogger, iceCreamsUrl, withLogs } from "../core";
 import IceCreamProps from "../interfaces/IceCream";
+import { useNetwork } from "./useNetwork";
+import { Preferences } from '@capacitor/preferences';
 
 const log = getLogger('IceCreamApi');
 
