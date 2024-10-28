@@ -6,6 +6,7 @@ import { RouteComponentProps } from 'react-router';
 import { IceCreamContext } from '../state/IceCreamProvider';
 import IceCream from './IceCream';
 import { AuthContext } from '../auth/AuthProvider';
+import { useNetwork } from '../state/useNetwork';
 const log = getLogger('IceCreamsList');
 
 const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
@@ -14,13 +15,15 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
 
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [showToast, setShowToast] = useState(false);
-    
+    const { networkStatus } = useNetwork();
+
     log('render');
     return (
         <IonPage>
             <IonHeader>
                 <IonToolbar>
                     <IonTitle>Your favourite icecream app!</IonTitle>
+                    <IonTitle slot="end">Network: {networkStatus.connected ? 'Online' : 'Offline'}</IonTitle>
                 </IonToolbar>
             </IonHeader>
             <IonContent>
