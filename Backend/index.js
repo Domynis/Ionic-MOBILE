@@ -6,7 +6,6 @@ const wss = new WebSocket.Server({ server });
 const Router = require('koa-router');
 const cors = require('koa-cors');
 const bodyparser = require('koa-bodyparser');
-
 app.use(bodyparser());
 app.use(cors());
 app.use(async (ctx, next) => {
