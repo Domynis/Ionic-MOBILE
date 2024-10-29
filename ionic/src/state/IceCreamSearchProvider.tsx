@@ -25,8 +25,9 @@ const initialState: IceCreamSearchState = {
 const FETCH_ITEMS_STARTED = 'FETCH_ITEMS_STARTED';
 const FETCH_ITEMS_SUCCEEDED = 'FETCH_ITEMS_SUCCEEDED';
 const FETCH_ITEMS_FAILED = 'FETCH_ITEMS_FAILED';
+const RESET_FILTER = 'RESET_FILTER';
 
-const reducer: (state: IceCreamSearchState, action: ActionProps) => IceCreamSearchState = 
+const reducer: (state: IceCreamSearchState, action: ActionProps) => IceCreamSearchState =
     (state, { type, payload }) => {
         switch (type) {
             case FETCH_ITEMS_STARTED:
@@ -36,6 +37,8 @@ const reducer: (state: IceCreamSearchState, action: ActionProps) => IceCreamSear
                 return { ...state, items: payload.items, fetching: false };
             case FETCH_ITEMS_FAILED:
                 return { ...state, fetchingError: payload.error, fetching: false };
+            case RESET_FILTER: 
+                return { ...state, items: [], fetching: false };
             default:
                 return state;
         }
@@ -46,9 +49,10 @@ export const IceCreamSearchContext = React.createContext<IceCreamSearchState>(in
 interface IceCreamSearchProviderProps {
     children: React.ReactNode;
     filter?: string; // Optional filter passed down to the provider
+    tastyFilter?: boolean; // Optional tasty filter passed down to the provider
 }
 
-export const IceCreamSearchProvider: React.FC<IceCreamSearchProviderProps> = ({ children, filter }) => {
+export const IceCreamSearchProvider: React.FC<IceCreamSearchProviderProps> = ({ children, filter, tastyFilter }) => {
     const { token } = useContext(AuthContext);
     const [state, dispatch] = useReducer(reducer, initialState);
     const { items, fetching, fetchingError } = state;
@@ -59,18 +63,20 @@ export const IceCreamSearchProvider: React.FC<IceCreamSearchProviderProps> = ({ 
             dispatch({ type: FETCH_ITEMS_STARTED });
             log('fetchSearchIceCreams started');
             const items = await getIceCreams(token);  // Fetch all items without pagination
-            const filteredItems = filter ? items.filter(item => 
-                item.name.toLowerCase().includes(filter.toLowerCase())) : items;  // Apply filter if provided
+            const filteredItems = items.filter(item =>
+                (!filter || item.name.toLowerCase().includes(filter.toLowerCase())) &&
+                (tastyFilter === undefined || item.tasty === tastyFilter)
+            );
             dispatch({ type: FETCH_ITEMS_SUCCEEDED, payload: { items: filteredItems } });
         } catch (error) {
             log('fetchSearchIceCreams failed');
             dispatch({ type: FETCH_ITEMS_FAILED, payload: { error } });
         }
-    }, [token, filter]);
+    }, [token, filter, tastyFilter]);
 
     useEffect(() => {
         fetchIceCreams();
-    }, [fetchIceCreams, filter]);
+    }, [fetchIceCreams, filter, tastyFilter]);
 
     const value = { items, fetching, fetchingError };
     log('returns');

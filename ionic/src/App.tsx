@@ -40,6 +40,7 @@ import { PrivateRoute } from './auth/PrivateRoute';
 import { ToastProvider } from './state/toastProvider';
 import { ellipse, square, triangle } from 'ionicons/icons';
 import IceCreamSearch from './pages/IceCreamSearch';
+import TastyFilterTab from './pages/TastyFilterTab';
 
 setupIonicReact();
 
@@ -59,15 +60,17 @@ const App: React.FC = () => (
 
 const MainRouter: React.FC = () => {
   const location = useLocation();
-  const showTabs = location.pathname === '/icecreams' || location.pathname === '/search'; // Only show tabs on these paths
+  const showTabs = location.pathname === '/icecreams' || location.pathname === '/search' || location.pathname === '/tasty-filter'; // Only show tabs on these paths
 
   return (
     <IonTabs>
       <IonRouterOutlet>
         <PrivateRoute path="/icecreams" component={IceCreamList} exact={true} />
         <PrivateRoute path="/search" component={IceCreamSearch} exact={true} />
+        <PrivateRoute path="/tasty-filter" component={TastyFilterTab} exact={true} />
         <PrivateRoute path="/icecream" component={IceCreamEdit} exact={true} />
         <PrivateRoute path="/icecream/:id" component={IceCreamEdit} exact={true} />
+
         <Route path="/login" component={Login} exact={true} />
         <Route exact path="/" render={() => <Redirect to="/icecreams" />} />
       </IonRouterOutlet>
@@ -79,7 +82,11 @@ const MainRouter: React.FC = () => {
           </IonTabButton>
           <IonTabButton tab="tab2" href="/search">
             <IonIcon icon={ellipse} />
-            <IonLabel>Search/filter</IonLabel>
+            <IonLabel>Search name</IonLabel>
+          </IonTabButton>
+          <IonTabButton tab="tab3" href="/tasty-filter">
+            <IonIcon icon={square} />
+            <IonLabel>Filter by tasty</IonLabel>
           </IonTabButton>
         </IonTabBar>
       )}
