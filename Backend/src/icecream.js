@@ -43,14 +43,15 @@ iceCreamRouter.get('/', async (ctx) => {
 
 // add an endpoint for a paginated list of icecreams (use query parameters for pagination)
 iceCreamRouter.get('/list', async (ctx) => {
+    console.log("userId ", ctx.state.user._id);
     const userId = ctx.state.user._id;
     const { page, pageSize } = ctx.request.query;
     const icecreams = await iceCreamStore.find({ userId });
     const start = (Number(page) - 1) * Number(pageSize);
     const end = start + Number(pageSize);
     const items = icecreams.slice(start, Math.min(end, icecreams.length))
-    console.log("getItemsPaged start end ", start, end);
-    console.log("getItemsPaged ", items);
+    // console.log("getItemsPaged start end ", start, end);
+    // console.log("getItemsPaged ", items);
     ctx.response.body = {
         items,
         hasNextPage: end < icecreams.length,

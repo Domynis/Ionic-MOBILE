@@ -23,7 +23,7 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
     const [pageSize, setPageSize] = useState(10);
     const fetchInProgressRef = useRef(false);
 
-    useEffect(getIceCreamsEffect, []);
+    useEffect(getIceCreamsEffect, [token]);
 
     const loadMoreData = async (event: CustomEvent<void>) => {
         if (fetchIceCreams) {

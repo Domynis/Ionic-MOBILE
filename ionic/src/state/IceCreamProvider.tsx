@@ -52,6 +52,7 @@ const SAVE_ITEM_SUCCEEDED = 'SAVE_ITEM_SUCCEEDED';
 const SAVE_ITEM_FAILED = 'SAVE_ITEM_FAILED';
 const SET_EDITING = 'SET_EDITING';
 const SYNC_ITEMS = 'SYNC_ITEMS';
+const TOKEN_CLEAR = 'TOKEN_CLEAR';
 
 
 const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
@@ -85,6 +86,8 @@ const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
                 return { ...state, editing: payload.editing };
             case SYNC_ITEMS:
                 return { ...state, syncing: payload };
+            case TOKEN_CLEAR:
+                return { ...state, items: [], fetchedPages: [], hasNextPage: false };
             default:
                 return state;
         }
@@ -107,7 +110,12 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
         dispatch({ type: 'SET_EDITING', payload: { editing: isEditing } });
     }, []);
 
-
+    useEffect(() => {
+        // if token is clear, clear the items
+        if (token === "") {
+            dispatch({ type: TOKEN_CLEAR });
+        }
+    }, [token]);
     useEffect(wsEffect, [token]);
 
     useEffect(() => {
@@ -143,7 +151,7 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
 
     const saveItem = useCallback<SaveItemFn>(saveIceCreamCallback, [networkStatus.connected, Preferences]);
 
-    const fetchIceCreams = useCallback<FetchIceCreamsFn>(fetchIceCreamsCallBack, [state.fetchedPages]);
+    const fetchIceCreams = useCallback<FetchIceCreamsFn>(fetchIceCreamsCallBack, [token, state.fetchedPages]);
 
     const value = { items, fetching, fetchingError, fetchedPages, hasNextPage, saving, savingError, saveItem, editing, setEditing, syncing, fetchIceCreams };
     log('returns');
