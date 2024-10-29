@@ -2,7 +2,7 @@ import React, { useCallback, useContext, useEffect } from "react";
 import { getLogger } from "../core";
 import IceCreamProps from "../interfaces/IceCream";
 import PropTypes, { string } from "prop-types";
-import { createIceCream, getIceCreams, newWebSocket, updateIceCream } from "./iceCreamApi";
+import { createIceCream, getIceCreams, getIceCreamsPaginated, newWebSocket, updateIceCream } from "./iceCreamApi";
 import { AuthContext } from "../auth/AuthProvider";
 import { useToast } from "./toastProvider";
 import { Preferences } from "@capacitor/preferences";
@@ -13,17 +13,21 @@ const log = getLogger('IceCreamProvider');
 const OFFLINE_ICECREAMS_KEY = "offline-icecreams";
 
 type SaveItemFn = (token: string, item: IceCreamProps) => Promise<any>;
+type FetchIceCreamsFn = (page: number, pageSize: number, canceled: boolean) => Promise<any>;
 
 export interface IceCreamsState {
     items?: IceCreamProps[];
+    hasNextPage: boolean;
     fetching: boolean;
     fetchingError?: Error | null;
+    fetchedPages: number[];
     saving: boolean;
     savingError?: Error | null;
     saveItem?: SaveItemFn;
     editing: boolean;
     setEditing?: (editing: boolean) => void;
     syncing: boolean;
+    fetchIceCreams?: FetchIceCreamsFn;
 }
 
 interface ActionProps {
@@ -33,6 +37,8 @@ interface ActionProps {
 
 const initialState: IceCreamsState = {
     fetching: false,
+    hasNextPage: false,
+    fetchedPages: [],
     saving: false,
     editing: false,
     syncing: false
@@ -54,7 +60,8 @@ const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
             case FETCH_ITEMS_STARTED:
                 return { ...state, fetching: true, fetchingError: null };
             case FETCH_ITEMS_SUCCEEDED:
-                return { ...state, items: payload.items, fetching: false };
+                log('FETCH_ITEMS_SUCCEEDED fetchedPages now ' + [...state.fetchedPages, payload.page]);
+                return { ...state, items: [...(state.items || []), ...payload.items], fetchedPages: [...state.fetchedPages, payload.page], hasNextPage: payload.hasNextPage, fetching: false };
             case FETCH_ITEMS_FAILED:
                 return { ...state, fetchingError: payload, fetching: false };
             case SAVE_ITEM_STARTED:
@@ -92,7 +99,7 @@ interface IceCreamProviderProps {
 export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) => {
     const { token } = useContext(AuthContext);
     const [state, dispatch] = React.useReducer(reducer, initialState);
-    const { items, fetching, fetchingError, saving, savingError, editing, syncing } = state;
+    const { items, fetching, fetchingError, fetchedPages, hasNextPage, saving, savingError, editing, syncing } = state;
     const { showToast } = useToast();
     const { networkStatus } = useNetwork();
 
@@ -101,7 +108,6 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
     }, []);
 
 
-    useEffect(getIceCreamsEffect, [token]);
     useEffect(wsEffect, [token]);
 
     useEffect(() => {
@@ -136,7 +142,10 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
     }, [networkStatus.connected])
 
     const saveItem = useCallback<SaveItemFn>(saveIceCreamCallback, [networkStatus.connected, Preferences]);
-    const value = { items, fetching, fetchingError, saving, savingError, saveItem, editing, setEditing, syncing };
+
+    const fetchIceCreams = useCallback<FetchIceCreamsFn>(fetchIceCreamsCallBack, [state.fetchedPages]);
+
+    const value = { items, fetching, fetchingError, fetchedPages, hasNextPage, saving, savingError, saveItem, editing, setEditing, syncing, fetchIceCreams };
     log('returns');
     return (
         <IceCreamContext.Provider value={value}>
@@ -144,35 +153,21 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
         </IceCreamContext.Provider>
     );
 
-
-
-    function getIceCreamsEffect() {
-        if (editing) {
-            return;
-        }
-        let canceled = false;
-        if (token) {
-            log('getIceCreamsEffect - fetching items');
-            fetchIceCreams();
-        }
-        return () => {
-            canceled = true;
-        }
-
-        async function fetchIceCreams() {
-            try {
-                log('fetchIceCreams started');
-                dispatch({ type: FETCH_ITEMS_STARTED });
-                const iceCreams = await getIceCreams(token);
-                log('fetchIceCreams succeeded');
-                if (!canceled) {
-                    dispatch({ type: FETCH_ITEMS_SUCCEEDED, payload: { items: iceCreams } });
-                }
-            } catch (error) {
-                log('fetchIceCreams failed');
-                // if(!canceled)
-                dispatch({ type: FETCH_ITEMS_FAILED, payload: { error } });
+    async function fetchIceCreamsCallBack(page: number, pageSize: number = 10, canceled: boolean) {
+        if(fetchedPages.includes(page)) return;
+        log("FETCH ITEMS CALLED!!!! with page: " + page);
+        try {
+            log('fetchIceCreams started');
+            dispatch({ type: FETCH_ITEMS_STARTED });
+            const { items, hasNextPage } = await getIceCreamsPaginated(token, page, pageSize);
+            log('fetchIceCreams succeeded');
+            if (!canceled) {
+                dispatch({ type: FETCH_ITEMS_SUCCEEDED, payload: { items, hasNextPage, page } });
             }
+        } catch (error) {
+            log('fetchIceCreams failed');
+            // if(!canceled)
+            dispatch({ type: FETCH_ITEMS_FAILED, payload: { error } });
         }
     }
 
@@ -184,7 +179,7 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
             offlineItems.push(item);
             log('storeOfflineItem ', item);
             log('storeOfflineItems ', offlineItems);
-            
+
             dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item } });
             await Preferences.set({ key: OFFLINE_ICECREAMS_KEY, value: JSON.stringify(offlineItems) });
         }
