@@ -147,7 +147,7 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
             showToast('All offline items synced.', 3000);
             dispatch({ type: SYNC_ITEMS, payload: false });
         };
-    }, [networkStatus.connected])
+    }, [networkStatus.connected]) // instead of networkStatus change to connection to API
 
     const saveItem = useCallback<SaveItemFn>(saveIceCreamCallback, [networkStatus.connected, Preferences]);
 

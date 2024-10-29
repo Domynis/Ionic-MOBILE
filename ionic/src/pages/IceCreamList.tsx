@@ -26,11 +26,14 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
     useEffect(getIceCreamsEffect, [token]);
 
     const loadMoreData = async (event: CustomEvent<void>) => {
-        if (fetchIceCreams) {
+        if (fetchIceCreams && !fetchInProgressRef.current) {
             log('loadMoreData - page', page);
+            fetchInProgressRef.current = true;
             const nextPage = page + 1;
             if (!fetchedPages.includes(nextPage)) {
-                await fetchIceCreams(nextPage, pageSize, false);
+                await fetchIceCreams(nextPage, pageSize, false).finally(() => {
+                    fetchInProgressRef.current = false;
+                });
             }
 
             setPage(nextPage);
