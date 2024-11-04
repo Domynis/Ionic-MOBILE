@@ -7,6 +7,7 @@ import { AuthContext } from "../auth/AuthProvider";
 import { useToast } from "./toastProvider";
 import { Preferences } from "@capacitor/preferences";
 import { useNetwork } from "./useNetwork";
+import { useServerStatus } from "./useServerStatus";
 
 const log = getLogger('IceCreamProvider');
 
@@ -52,7 +53,8 @@ const SAVE_ITEM_SUCCEEDED = 'SAVE_ITEM_SUCCEEDED';
 const SAVE_ITEM_FAILED = 'SAVE_ITEM_FAILED';
 const SET_EDITING = 'SET_EDITING';
 const SYNC_ITEMS = 'SYNC_ITEMS';
-const TOKEN_CLEAR = 'TOKEN_CLEAR';
+const CLEAR_LIST = 'CLEAR_LIST';
+const PERMANENT_ITEM_ID = 'PERMANENT_ITEM_ID';
 
 
 const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
@@ -62,7 +64,11 @@ const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
                 return { ...state, fetching: true, fetchingError: null };
             case FETCH_ITEMS_SUCCEEDED:
                 log('FETCH_ITEMS_SUCCEEDED fetchedPages now ' + [...state.fetchedPages, payload.page]);
-                return { ...state, items: [...(state.items || []), ...payload.items], fetchedPages: [...state.fetchedPages, payload.page], hasNextPage: payload.hasNextPage, fetching: false };
+                const new_items = [...(state.items || []), ...payload.items];
+                // if id is not unique, remove duplicates
+                const uniqueItems = new_items.filter((item, index) => new_items.findIndex(it => it._id === item._id) === index);
+
+                return { ...state, items: uniqueItems, fetchedPages: [...state.fetchedPages, payload.page], hasNextPage: payload.hasNextPage, fetching: false };
             case FETCH_ITEMS_FAILED:
                 return { ...state, fetchingError: payload, fetching: false };
             case SAVE_ITEM_STARTED:
@@ -70,7 +76,7 @@ const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
             case SAVE_ITEM_SUCCEEDED:
                 log('SAVE_ITEM_SUCCEEDED ' + JSON.stringify(payload.item));
                 const items = [...(state.items || [])];
-                const item = payload.item;
+                const item = { ...payload.item, _id: payload.item._id};
                 const index = items.findIndex(it => it._id === item._id);
                 if (index === -1) {
                     // items.splice(0, 0, item);
@@ -86,8 +92,18 @@ const reducer: (state: IceCreamsState, action: ActionProps) => IceCreamsState =
                 return { ...state, editing: payload.editing };
             case SYNC_ITEMS:
                 return { ...state, syncing: payload };
-            case TOKEN_CLEAR:
+            case CLEAR_LIST:
                 return { ...state, items: [], fetchedPages: [], hasNextPage: false };
+            case PERMANENT_ITEM_ID:
+                const state_items = [...(state.items || [])];
+                log('PERMANENT_ITEM_ID temp_id', payload.temp_id);
+                log('PERMANENT_ITEM_ID new_item_id', payload.new_item._id);
+                const temp_index = state_items.findIndex(it => it._id === payload.temp_id);
+                log('PERMANENT_ITEM_ID temp_index', temp_index);
+                if(temp_index !== -1){
+                    state_items[temp_index]._id = payload.new_item._id;
+                }
+                return { ...state, items: state_items };
             default:
                 return state;
         }
@@ -104,7 +120,6 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
     const [state, dispatch] = React.useReducer(reducer, initialState);
     const { items, fetching, fetchingError, fetchedPages, hasNextPage, saving, savingError, editing, syncing } = state;
     const { showToast } = useToast();
-    const { networkStatus } = useNetwork();
 
     const setEditing = useCallback((isEditing: boolean) => {
         dispatch({ type: 'SET_EDITING', payload: { editing: isEditing } });
@@ -113,13 +128,14 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
     useEffect(() => {
         // if token is clear, clear the items
         if (token === "") {
-            dispatch({ type: TOKEN_CLEAR });
+            dispatch({ type: CLEAR_LIST });
         }
     }, [token]);
     useEffect(wsEffect, [token]);
+    const isServerAvailable = useServerStatus(5000);
 
     useEffect(() => {
-        if (networkStatus.connected && !syncing) {
+        if (isServerAvailable && !syncing) {
             syncOfflineData();
         }
         async function syncOfflineData() {
@@ -133,7 +149,19 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
             for (const item of offlineItems) {
                 try {
                     log('syncOfflineData item', item);
-                    await (item._id ? updateIceCream(token, item) : createIceCream(token, item));
+
+
+                    if(item._id && !item._id.startsWith('TEMP')) {
+                        await updateIceCream(token, item);
+                    } else {
+                        const added_item = await createIceCream(token, { ...item, _id: undefined });
+                        dispatch({ type: PERMANENT_ITEM_ID, payload: { new_item: added_item, temp_id: item._id} });
+                    }
+
+                    // remove item from offline
+                    const index = offlineItems.findIndex((it: IceCreamProps) => it._id === item._id);
+                    offlineItems.splice(index, 1);
+
                     // dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item } });
                 } catch (error) {
                     log('syncOfflineData failed ', error);
@@ -147,14 +175,25 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
             showToast('All offline items synced.', 3000);
             dispatch({ type: SYNC_ITEMS, payload: false });
         };
-    }, [networkStatus.connected]) // TODO: instead of networkStatus change to connection to API
+    }, [isServerAvailable]) // TODO: instead of networkStatus change to connection to API
 
-    const saveItem = useCallback<SaveItemFn>(saveIceCreamCallback, [networkStatus.connected, Preferences]);
-
-    const fetchIceCreams = useCallback<FetchIceCreamsFn>(fetchIceCreamsCallBack, [token, state.fetchedPages]);
+    const saveItem = useCallback<SaveItemFn>(saveIceCreamCallback, [isServerAvailable, Preferences]);
+    
+    const fetchIceCreams = useCallback<FetchIceCreamsFn>(fetchIceCreamsCallBack, [token]);
 
     const value = { items, fetching, fetchingError, fetchedPages, hasNextPage, saving, savingError, saveItem, editing, setEditing, syncing, fetchIceCreams };
+
+    
     log('returns');
+
+    useEffect(() => {
+        if (!isServerAvailable) {
+            showToast('Server is not available', 3000);
+        } else {
+            showToast('Server is available', 3000);
+        }
+    }, [isServerAvailable]);
+
     return (
         <IceCreamContext.Provider value={value}>
             {children}
@@ -162,7 +201,7 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
     );
 
     async function fetchIceCreamsCallBack(page: number, pageSize: number = 10, canceled: boolean) {
-        if(fetchedPages.includes(page)) return;
+        if (fetchedPages.includes(page)) return;
         log("FETCH ITEMS CALLED!!!! with page: " + page);
         try {
             log('fetchIceCreams started');
@@ -172,9 +211,9 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
             if (!canceled) {
                 dispatch({ type: FETCH_ITEMS_SUCCEEDED, payload: { items, hasNextPage, page } });
             }
-        } catch (error : any) {
+        } catch (error: any) {
             log('fetchIceCreams failed');
-            if(error.status === 401 && logout) {
+            if (error.status === 401 && logout) {
                 logout();
             }
             dispatch({ type: FETCH_ITEMS_FAILED, payload: { error } });
@@ -186,7 +225,14 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
             dispatch({ type: SAVE_ITEM_STARTED });
             const { value } = await Preferences.get({ key: OFFLINE_ICECREAMS_KEY });
             const offlineItems = value ? JSON.parse(value) : [];
-            offlineItems.push(item);
+            if(!item._id) {
+                item._id = 'TEMP' + Math.random().toString(); // adds a temporary id
+            }
+            if (offlineItems.find((it: IceCreamProps) => it._id === item._id)) {
+                offlineItems[offlineItems.findIndex((it: IceCreamProps) => it._id === item._id)] = item;
+            } else {
+                offlineItems.push(item);
+            }
             log('storeOfflineItem ', item);
             log('storeOfflineItems ', offlineItems);
 
@@ -196,10 +242,17 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
         try {
             log('saveIceCream started');
             dispatch({ type: SAVE_ITEM_STARTED });
-            if (networkStatus.connected) {
+            if (isServerAvailable) {
                 try {
                     log('saveIceCream online');
-                    const savedIceCream = await (iceCream._id ? updateIceCream(token, iceCream) : createIceCream(token, iceCream));
+                    var savedIceCream;
+                    if(iceCream._id && !iceCream._id.startsWith('TEMP')) {
+                        log('icecreamid: ' + iceCream._id);
+                        savedIceCream = await updateIceCream(token, iceCream);
+                    } else {
+                        iceCream._id = undefined;
+                        savedIceCream = await createIceCream(token, iceCream);
+                    }
                     log('saveIceCream succeeded');
                     dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item: savedIceCream } });
                 } catch (error) {

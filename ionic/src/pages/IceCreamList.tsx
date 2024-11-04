@@ -7,6 +7,7 @@ import { IceCreamContext } from '../state/IceCreamProvider';
 import IceCream from './IceCream';
 import { AuthContext } from '../auth/AuthProvider';
 import { useNetwork } from '../state/useNetwork';
+import { useServerStatus } from '../state/useServerStatus';
 const log = getLogger('IceCreamsList');
 
 const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
@@ -17,6 +18,7 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
     const [disableInfiniteScroll, setDisableInfiniteScroll] = useState<boolean>(false);
     const [showToast, setShowToast] = useState(false);
     const { networkStatus } = useNetwork();
+    const isServerAvailable = useServerStatus();
 
     // track pagination
     const [page, setPage] = useState(1);
@@ -26,7 +28,7 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
     useEffect(getIceCreamsEffect, [token]);
 
     const loadMoreData = async (event: CustomEvent<void>) => {
-        if (fetchIceCreams && !fetchInProgressRef.current) {
+        if (fetchIceCreams && !fetchInProgressRef.current && isServerAvailable) {
             log('loadMoreData - page', page);
             fetchInProgressRef.current = true;
             const nextPage = page + 1;
@@ -91,7 +93,8 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
                 {fetchingError && (
                     <div>{fetchingError.message || 'Failed to fetch items!'}</div>
                 )}
-                <IonInfiniteScroll threshold="1px" disabled={disableInfiniteScroll} onIonInfinite={(e: CustomEvent<void>) => loadMoreData(e)}>
+                {/* TODO: Fix loading correctly after returning Online. */}
+                <IonInfiniteScroll threshold="100px" disabled={disableInfiniteScroll} onIonInfinite={(e: CustomEvent<void>) => loadMoreData(e)}> 
                     <IonInfiniteScrollContent loadingText="Loading more data..."> </IonInfiniteScrollContent>
                 </IonInfiniteScroll>
                 <IonFab vertical="bottom" horizontal="start" slot="fixed">
