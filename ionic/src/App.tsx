@@ -1,5 +1,5 @@
-import { Redirect, Route } from 'react-router-dom';
-import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
+import { Redirect, Route, useLocation } from 'react-router-dom';
+import { IonApp, IonIcon, IonLabel, IonRouterOutlet, IonTabBar, IonTabButton, IonTabs, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 
 /* Core CSS required for Ionic components to work properly */
@@ -38,27 +38,61 @@ import { AuthProvider } from './auth/AuthProvider';
 import { Login } from './pages/Login';
 import { PrivateRoute } from './auth/PrivateRoute';
 import { ToastProvider } from './state/toastProvider';
+import { ellipse, square, triangle } from 'ionicons/icons';
+import IceCreamSearch from './pages/IceCreamSearch';
+import TastyFilterTab from './pages/TastyFilterTab';
 
 setupIonicReact();
 
 const App: React.FC = () => (
   <IonApp>
     <IonReactRouter>
-      <IonRouterOutlet>
-        <AuthProvider>
-          <Route path="/login" component={Login} exact={true} />
-          <ToastProvider>
-            <IceCreamProvider>
-              <PrivateRoute path="/icecreams" component={IceCreamList} exact={true} />
-              <PrivateRoute path="/icecream" component={IceCreamEdit} exact={true} />
-              <PrivateRoute path="/icecream/:id" component={IceCreamEdit} exact={true} />
-            </IceCreamProvider>
-          </ToastProvider>
-          <Route exact path="/" render={() => <Redirect to="/icecreams" />} />
-        </AuthProvider>
-      </IonRouterOutlet>
+      <AuthProvider>
+        <ToastProvider>
+          <IceCreamProvider>
+            <MainRouter />
+          </IceCreamProvider>
+        </ToastProvider>
+      </AuthProvider>
     </IonReactRouter>
   </IonApp>
 );
+
+const MainRouter: React.FC = () => {
+  const location = useLocation();
+  const showTabs = location.pathname === '/icecreams' || location.pathname === '/search' || location.pathname === '/tasty-filter'; // Only show tabs on these paths
+
+  return (
+    <IonTabs>
+      <IonRouterOutlet>
+        <PrivateRoute path="/icecreams" component={IceCreamList} exact={true} />
+        <PrivateRoute path="/search" component={IceCreamSearch} exact={true} />
+        <PrivateRoute path="/tasty-filter" component={TastyFilterTab} exact={true} />
+        <PrivateRoute path="/icecream" component={IceCreamEdit} exact={true} />
+        <PrivateRoute path="/icecream/:id" component={IceCreamEdit} exact={true} />
+
+        <Route path="/login" component={Login} exact={true} />
+        <Route exact path="/" render={() => <Redirect to="/icecreams" />} />
+      </IonRouterOutlet>
+      {showTabs && (
+        <IonTabBar slot="bottom">
+          <IonTabButton tab="tab1" href="/icecreams">
+            <IonIcon icon={triangle} />
+            <IonLabel>List view</IonLabel>
+          </IonTabButton>
+          <IonTabButton tab="tab2" href="/search">
+            <IonIcon icon={ellipse} />
+            <IonLabel>Search name</IonLabel>
+          </IonTabButton>
+          <IonTabButton tab="tab3" href="/tasty-filter">
+            <IonIcon icon={square} />
+            <IonLabel>Filter by tasty</IonLabel>
+          </IonTabButton>
+        </IonTabBar>
+      )}
+    </IonTabs>
+  );
+};
+
 
 export default App;

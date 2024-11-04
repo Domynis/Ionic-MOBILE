@@ -40,6 +40,8 @@ authRouter.post('/signup', async (ctx) => {
 authRouter.post('/login', async (ctx) => {
     const credentials = ctx.request.body;
     const user = await userStore.findOne({ username: credentials.username });
+    console.log("user ", user);
+    console.log("credentials ", credentials);
     if (user && user.password === credentials.password) {
         ctx.response.body = { token: createToken(user) };
         ctx.response.status = 200; // OK

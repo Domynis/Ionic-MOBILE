@@ -18,6 +18,10 @@ export const updateIceCream: (token: string, item: IceCreamProps) => Promise<Ice
     return withLogs(axios.put(`${iceCreamsUrl}/${item._id}`, item, authConfig(token)), 'updateIceCream');
 };
 
+export const getIceCreamsPaginated: (token: string, page: number, pageSize: number) => Promise<{ items: IceCreamProps, hasNextPage: boolean }> = (token, page, pageSize) => {
+    return withLogs(axios.get(`${iceCreamsUrl}/list?page=${page}&pageSize=${pageSize}`, authConfig(token)), 'getIceCreamsPaginated');
+}
+
 interface MessageData {
     event: string;
     payload: IceCreamProps;

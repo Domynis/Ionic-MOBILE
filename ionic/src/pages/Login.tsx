@@ -25,10 +25,9 @@ export const Login: React.FC<RouteComponentProps> = ({ history }) => {
         username: e.detail.value || ''
     }), [state]);
     const handleLogin = useCallback(() => {
-        log('handleLogin...');
+        log('handleLogin... with username & password:', username, password);
         login?.(username, password);
     }, [username, password]);
-    log('render');
     useEffect(() => {
         if (isAuthenticated) {
             log('redirecting to home');
@@ -50,8 +49,8 @@ export const Login: React.FC<RouteComponentProps> = ({ history }) => {
                 />
                 <IonInput
                     placeholder="Password"
-                    value={password}
                     type="password"
+                    value={password}
                     onIonChange={handlePasswordChange}
                 />
                 <IonLoading isOpen={isAuthenticating} />
