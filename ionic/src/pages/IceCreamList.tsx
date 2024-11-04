@@ -48,7 +48,6 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
 
 
     function getIceCreamsEffect() {
-        // TODO: FIX DOUBLE FETCHING IN THE START
         if (editing || !fetchIceCreams || !token || fetching || fetchedPages.includes(page)) {
             return;
         }

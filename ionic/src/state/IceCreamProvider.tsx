@@ -100,7 +100,7 @@ interface IceCreamProviderProps {
 }
 
 export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) => {
-    const { token } = useContext(AuthContext);
+    const { token, logout } = useContext(AuthContext);
     const [state, dispatch] = React.useReducer(reducer, initialState);
     const { items, fetching, fetchingError, fetchedPages, hasNextPage, saving, savingError, editing, syncing } = state;
     const { showToast } = useToast();
@@ -147,7 +147,7 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
             showToast('All offline items synced.', 3000);
             dispatch({ type: SYNC_ITEMS, payload: false });
         };
-    }, [networkStatus.connected]) // instead of networkStatus change to connection to API
+    }, [networkStatus.connected]) // TODO: instead of networkStatus change to connection to API
 
     const saveItem = useCallback<SaveItemFn>(saveIceCreamCallback, [networkStatus.connected, Preferences]);
 
@@ -172,9 +172,11 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
             if (!canceled) {
                 dispatch({ type: FETCH_ITEMS_SUCCEEDED, payload: { items, hasNextPage, page } });
             }
-        } catch (error) {
+        } catch (error : any) {
             log('fetchIceCreams failed');
-            // if(!canceled)
+            if(error.status === 401 && logout) {
+                logout();
+            }
             dispatch({ type: FETCH_ITEMS_FAILED, payload: { error } });
         }
     }
