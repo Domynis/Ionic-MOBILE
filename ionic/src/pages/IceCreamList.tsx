@@ -30,6 +30,7 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
     const loadMoreData = async (event: CustomEvent<void>) => {
         if (fetchIceCreams && !fetchInProgressRef.current && isServerAvailable) {
             log('loadMoreData - page', page);
+            log('loadMoreData - isServerAvailable', isServerAvailable);
             fetchInProgressRef.current = true;
             const nextPage = page + 1;
             if (!fetchedPages.includes(nextPage)) {
@@ -82,7 +83,7 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
                 </IonToolbar>
             </IonHeader>
             <IonContent>
-                <IonLoading isOpen={fetching} message="Fetching items" />
+                {/* <IonLoading isOpen={fetching} message="Fetching items" /> */}
                 {items && (
                     <IonList>
                         {items.map(({ _id, name, description, price, tasty }) => (
@@ -94,8 +95,8 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
                     <div>{fetchingError.message || 'Failed to fetch items!'}</div>
                 )}
                 {/* TODO: Fix loading correctly after returning Online. */}
-                <IonInfiniteScroll threshold="100px" disabled={disableInfiniteScroll} onIonInfinite={(e: CustomEvent<void>) => loadMoreData(e)}> 
-                    <IonInfiniteScrollContent loadingText="Loading more data..."> </IonInfiniteScrollContent>
+                <IonInfiniteScroll threshold="100px" disabled={disableInfiniteScroll} onIonInfinite={(e: CustomEvent<void>) => loadMoreData(e)}>
+                    {isServerAvailable && (<IonInfiniteScrollContent loadingText="Loading more data..."> </IonInfiniteScrollContent>)}
                 </IonInfiniteScroll>
                 <IonFab vertical="bottom" horizontal="start" slot="fixed">
                     <IonFabButton onClick={logout}>
