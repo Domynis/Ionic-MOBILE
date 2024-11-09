@@ -7,7 +7,7 @@ import { IceCreamContext } from '../state/IceCreamProvider';
 import IceCream from './IceCream';
 import { AuthContext } from '../auth/AuthProvider';
 import { useNetwork } from '../state/useNetwork';
-import { useServerStatus } from '../state/useServerStatus';
+// import { useServerStatus } from '../state/useServerStatus';
 const log = getLogger('IceCreamsList');
 
 const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
@@ -18,7 +18,7 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
     const [disableInfiniteScroll, setDisableInfiniteScroll] = useState<boolean>(false);
     const [showToast, setShowToast] = useState(false);
     const { networkStatus } = useNetwork();
-    const isServerAvailable = useServerStatus();
+    const isServerAvailable = true;
 
     // track pagination
     const [page, setPage] = useState(1);
