@@ -45,12 +45,14 @@ export const Login: React.FC<RouteComponentProps> = ({ history }) => {
                 <IonInput
                     placeholder="Username"
                     value={username}
+                    id="username"
                     onIonChange={handleUsernameChange}
                 />
                 <IonInput
                     placeholder="Password"
                     type="password"
                     value={password}
+                    id="password"
                     onIonChange={handlePasswordChange}
                 />
                 <IonLoading isOpen={isAuthenticating} />

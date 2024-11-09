@@ -16,8 +16,8 @@ export class IceCreamStore {
     }
 
     async insert(icecream) {
-        if (!icecream.name || !icecream.description) {
-            throw new Error('Missing name or description');
+        if (!icecream.name) {
+            throw new Error('Missing name');
         }
         return this.store.insert(icecream);
     }
