@@ -182,9 +182,6 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
 
     const value = { items, fetching, fetchingError, fetchedPages, hasNextPage, saving, savingError, saveItem, editing, setEditing, syncing, fetchIceCreams };
 
-    
-    log('returns');
-
     // useEffect(() => {
     //     if (!isServerAvailable) {
     //         showToast('Server is not available', 3000);
@@ -238,6 +235,7 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
             dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item } });
             await Preferences.set({ key: OFFLINE_ICECREAMS_KEY, value: JSON.stringify(offlineItems) });
         }
+        
         try {
             log('saveIceCream started');
             dispatch({ type: SAVE_ITEM_STARTED });
