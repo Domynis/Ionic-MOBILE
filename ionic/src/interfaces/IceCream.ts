@@ -5,5 +5,6 @@ interface IceCreamProps {
     price?: number;
     tasty?: boolean;
     photoUrl?: string;
+    photoUrlBE?: string;
 }
 export default IceCreamProps;

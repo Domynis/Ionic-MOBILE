@@ -3,9 +3,10 @@ import { getLogger } from "../core";
 import { IceCreamContext } from "../state/IceCreamProvider";
 import { useCallback, useContext, useEffect, useState } from "react";
 import IceCreamProps from "../interfaces/IceCream";
-import { IonButton, IonButtons, IonCheckbox, IonContent, IonHeader, IonImg, IonInput, IonLoading, IonPage, IonText, IonTitle, IonToolbar } from "@ionic/react";
+import { IonActionSheet, IonButton, IonButtons, IonCheckbox, IonContent, IonHeader, IonImg, IonInput, IonLoading, IonPage, IonText, IonTitle, IonToolbar } from "@ionic/react";
 import { AuthContext } from "../auth/AuthProvider";
-import { takePhoto, MyPhoto, getWebviewPathFromFilesystem } from "../utils/photoUtils";
+import { takePhoto, MyPhoto, getWebviewPathFromFilesystem, getImageBlobUrl } from "../utils/photoUtils";
+import { uploadIceCreamPhoto } from "../state/iceCreamApi";
 
 const log = getLogger('IceCreamEdit');
 
@@ -22,6 +23,7 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
     const [tasty, setTasty] = useState(false);
     const [icecream, setIceCream] = useState<IceCreamProps>();
     const [photo, setPhoto] = useState<MyPhoto>();
+    const [showActionSheet, setShowActionSheet] = useState(false);
 
 
     // useEffect(() => {
@@ -37,7 +39,7 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
             const routeId = match.params.id || '';
             const item = items?.find(it => it._id === routeId);
             setIceCream(item);
-    
+
             if (item) {
                 setName(item.name);
                 if (item.description) {
@@ -51,7 +53,13 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
                 }
                 if (item.photoUrl) {
                     log('useEffect - photoUrl', item.photoUrl);
-                    const webviewPath = await getWebviewPathFromFilesystem(item.photoUrl, "jpeg");
+                    // const webviewPath = !item.photoUrl.includes("http") ? await getWebviewPathFromFilesystem(item.photoUrl, "jpeg") :
+                    //     await getImageBlobUrl(item.photoUrl, token);
+                    let webviewPath = !item.photoUrl.includes("http") ? await getWebviewPathFromFilesystem(item.photoUrl, "jpeg")
+                        : await getImageBlobUrl(item.photoUrl, token);
+                    if (webviewPath === undefined && item.photoUrlBE) {
+                        webviewPath = await getImageBlobUrl(item.photoUrlBE, token);
+                    }
                     setPhoto({
                         filepath: item.photoUrl,
                         webviewPath: webviewPath,
@@ -59,7 +67,7 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
                 }
             }
         };
-    
+
         fetchData();
     }, [match.params.id, items]);
 
@@ -82,6 +90,28 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
             history.goBack();
         });
     }, [icecream, saveItem, name, description, price, tasty, photo, history]);
+
+    const handleUpload = useCallback(async () => {
+        if (photo && icecream) {
+            log('handleUpload', photo);
+            try {
+                const response = await uploadIceCreamPhoto(token, icecream, photo);
+                log('handleUpload - response', response);
+
+                if (response && response.photoUrl) {
+                    setPhoto({
+                        filepath: response.photoUrl,
+                        webviewPath: await getImageBlobUrl(response.photoUrl, token),
+                    });
+                } else {
+                    alert('Failed to upload photo');
+                }
+            } catch (error) {
+                log('handleUpload - error', error);
+                alert('Failed to upload photo');
+            }
+        }
+    }, [icecream, photo]);
     return (
         <IonPage>
             <IonHeader>
@@ -102,7 +132,25 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
                 <IonText>Tasty:</IonText>
                 <IonCheckbox checked={tasty} onIonChange={e => setTasty(e.detail.checked)} />
                 <IonButton onClick={handleTakePhoto}>Take photo</IonButton>
-                {photo && <IonImg src={photo.webviewPath} alt="icecream" style={{ width: 400, height: 400 }}/>}
+                {photo && (
+                    <>
+                        <div onClick={() => setShowActionSheet(true)}>
+                            <IonImg src={photo.webviewPath} alt="icecream" style={{ width: 400, height: 400 }} />
+                        </div>
+                        <IonActionSheet
+                            isOpen={showActionSheet}
+                            onDidDismiss={() => setShowActionSheet(false)}
+                            buttons={[
+                                {
+                                    text: 'Upload',
+                                    role: 'selected',
+                                    icon: 'cloud-upload-outline',
+                                    handler: handleUpload
+                                }
+                            ]}
+                        />
+                    </>
+                )}
                 <IonLoading isOpen={saving} />
                 {savingError && (
                     <div>{savingError.message || 'Failed to save item!'}</div>

@@ -1,8 +1,9 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useContext, useEffect, useState } from "react";
 import { getLogger } from "../core";
 import IceCreamProps from "../interfaces/IceCream";
 import { IonImg, IonItem, IonLabel } from "@ionic/react";
-import { getWebviewPathFromFilesystem } from "../utils/photoUtils";
+import { getImageBlobUrl, getWebviewPathFromFilesystem } from "../utils/photoUtils";
+import { AuthContext } from "../auth/AuthProvider";
 
 const log = getLogger('IceCream');
 
@@ -10,14 +11,20 @@ interface IceCreamPropsExt extends IceCreamProps {
     onEdit: (id?: string) => void;
 }
 
-const IceCream: React.FC<IceCreamPropsExt> = ({ _id: id, name, description, price, tasty, photoUrl, onEdit }) => {
-    
+const IceCream: React.FC<IceCreamPropsExt> = ({ _id: id, name, description, price, tasty, photoUrl, photoUrlBE, onEdit }) => {
+
     const [photoWebviewPath, setPhotoWebviewPath] = useState<string>("https://via.placeholder.com/150");
-    
+    const { token } = useContext(AuthContext);
+
     useEffect(() => {
         const fetchData = async () => {
+            log('useEffect - photoUrl', photoUrl);
             if (photoUrl) {
-                const webviewPath = await getWebviewPathFromFilesystem(photoUrl, "jpeg");
+                let webviewPath = !photoUrl.includes("http") ? await getWebviewPathFromFilesystem(photoUrl, "jpeg")
+                    : await getImageBlobUrl(photoUrl, token);
+                if(webviewPath === undefined && photoUrlBE) {
+                    webviewPath = await getImageBlobUrl(photoUrlBE, token);
+                }
                 setPhotoWebviewPath(webviewPath ?? "https://via.placeholder.com/150");
             }
         };
