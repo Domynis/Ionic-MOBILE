@@ -5,7 +5,7 @@ import { useCallback, useContext, useEffect, useState } from "react";
 import IceCreamProps from "../interfaces/IceCream";
 import { IonActionSheet, IonButton, IonButtons, IonCheckbox, IonContent, IonHeader, IonImg, IonInput, IonLoading, IonPage, IonText, IonTitle, IonToolbar } from "@ionic/react";
 import { AuthContext } from "../auth/AuthProvider";
-import { takePhoto, MyPhoto, getWebviewPathFromFilesystem, getImageBlobUrl } from "../utils/photoUtils";
+import { takePhoto, MyPhoto, getWebviewPathFromFilesystem, getImageBlobUrl, getWebviewPath } from "../utils/photoUtils";
 import { uploadIceCreamPhoto } from "../state/iceCreamApi";
 
 const log = getLogger('IceCreamEdit');
@@ -55,11 +55,8 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
                     log('useEffect - photoUrl', item.photoUrl);
                     // const webviewPath = !item.photoUrl.includes("http") ? await getWebviewPathFromFilesystem(item.photoUrl, "jpeg") :
                     //     await getImageBlobUrl(item.photoUrl, token);
-                    let webviewPath = !item.photoUrl.includes("http") ? await getWebviewPathFromFilesystem(item.photoUrl, "jpeg")
-                        : await getImageBlobUrl(item.photoUrl, token);
-                    if (webviewPath === undefined && item.photoUrlBE) {
-                        webviewPath = await getImageBlobUrl(item.photoUrlBE, token);
-                    }
+                    
+                    const webviewPath = await getWebviewPath(item.photoUrl, item.photoUrlBE, token);
                     setPhoto({
                         filepath: item.photoUrl,
                         webviewPath: webviewPath,

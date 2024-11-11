@@ -29,7 +29,7 @@ export async function takePhoto(imageTitle?: string): Promise<MyPhoto | null> {
     }
 }
 
-async function savePhoto(photo: Photo, imageTitle? : string): Promise<{ filepath: string }> {
+async function savePhoto(photo: Photo, imageTitle?: string): Promise<{ filepath: string }> {
     // Convert photo to base64 for saving
     const response = await fetch(photo.webPath!);
     const blob = await response.blob();
@@ -37,7 +37,7 @@ async function savePhoto(photo: Photo, imageTitle? : string): Promise<{ filepath
 
     // Generate a filename and save the photo
     const cleanedTitle = imageTitle ? imageTitle.replace(/[^a-zA-Z0-9_]/g, '') : '';
-    const fileName = cleanedTitle ?  cleanedTitle + ".jpeg" : new Date().getTime() + '.jpeg';
+    const fileName = cleanedTitle ? cleanedTitle + ".jpeg" : new Date().getTime() + '.jpeg';
     const savedFile = await Filesystem.writeFile({
         path: fileName,
         data: base64Data,
@@ -81,13 +81,22 @@ export const getImageBlobUrl = async (url: string, token: string) => {
             },
             responseType: 'blob'
         });
-        
+
         return URL.createObjectURL(response.data);
     } catch (error) {
         console.error("Error fetching image with token:", error);
         return undefined;
     }
 };
+
+export async function getWebviewPath(photoUrl: string, photoUrlBE: string | undefined, token: string) {
+    let webviewPath = !photoUrl.includes("http") ? await getWebviewPathFromFilesystem(photoUrl, "jpeg")
+        : await getImageBlobUrl(photoUrl, token);
+    if (webviewPath === undefined && photoUrlBE) {
+        webviewPath = await getImageBlobUrl(photoUrlBE, token);
+    }
+    return webviewPath;
+}
 
 // Helper function to convert a Blob to Base64
 const convertBlobToBase64 = (blob: Blob): Promise<string | ArrayBuffer | null> => {

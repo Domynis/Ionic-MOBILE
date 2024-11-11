@@ -2,7 +2,7 @@ import { memo, useContext, useEffect, useState } from "react";
 import { getLogger } from "../core";
 import IceCreamProps from "../interfaces/IceCream";
 import { IonImg, IonItem, IonLabel } from "@ionic/react";
-import { getImageBlobUrl, getWebviewPathFromFilesystem } from "../utils/photoUtils";
+import { getImageBlobUrl, getWebviewPath, getWebviewPathFromFilesystem } from "../utils/photoUtils";
 import { AuthContext } from "../auth/AuthProvider";
 
 const log = getLogger('IceCream');
@@ -20,11 +20,7 @@ const IceCream: React.FC<IceCreamPropsExt> = ({ _id: id, name, description, pric
         const fetchData = async () => {
             log('useEffect - photoUrl', photoUrl);
             if (photoUrl) {
-                let webviewPath = !photoUrl.includes("http") ? await getWebviewPathFromFilesystem(photoUrl, "jpeg")
-                    : await getImageBlobUrl(photoUrl, token);
-                if(webviewPath === undefined && photoUrlBE) {
-                    webviewPath = await getImageBlobUrl(photoUrlBE, token);
-                }
+                let webviewPath = await getWebviewPath(photoUrl, photoUrlBE, token);
                 setPhotoWebviewPath(webviewPath ?? "https://via.placeholder.com/150");
             }
         };
