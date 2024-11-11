@@ -4,5 +4,7 @@ interface IceCreamProps {
     description?: string;
     price?: number;
     tasty?: boolean;
+    photoUrl?: string;
+    photoUrlBE?: string;
 }
 export default IceCreamProps;

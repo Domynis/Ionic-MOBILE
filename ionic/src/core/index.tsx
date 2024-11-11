@@ -28,9 +28,16 @@ export const config = {
   },
 };
 
-export const authConfig = (token? : string) => ({
+export const authConfig = (token?: string) => ({
   headers: {
     'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  },
+});
+
+export const authConfigMultiPart = (token?: string) => ({
+  headers: {
+    'content-type': 'multipart/form-data',
     'Authorization': `Bearer ${token}`,
   },
 });

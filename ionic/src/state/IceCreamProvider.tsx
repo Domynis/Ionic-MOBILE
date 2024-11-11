@@ -6,8 +6,6 @@ import { createIceCream, getIceCreams, getIceCreamsPaginated, newWebSocket, upda
 import { AuthContext } from "../auth/AuthProvider";
 import { useToast } from "./toastProvider";
 import { Preferences } from "@capacitor/preferences";
-import { useNetwork } from "./useNetwork";
-import { useServerStatus } from "./useServerStatus";
 
 const log = getLogger('IceCreamProvider');
 
@@ -132,67 +130,65 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
         }
     }, [token]);
     useEffect(wsEffect, [token]);
-    const isServerAvailable = useServerStatus(5000);
+    // const isServerAvailable = useServerStatus(5000);
+    const isServerAvailable = true;
 
-    useEffect(() => {
-        if (isServerAvailable && !syncing) {
-            syncOfflineData();
-        }
-        async function syncOfflineData() {
-            const { value } = await Preferences.get({ key: OFFLINE_ICECREAMS_KEY });
-            if (!value) return;
+    // useEffect(() => {
+    //     if (isServerAvailable && !syncing) {
+    //         syncOfflineData();
+    //     }
+    //     async function syncOfflineData() {
+    //         const { value } = await Preferences.get({ key: OFFLINE_ICECREAMS_KEY });
+    //         if (!value) return;
 
-            dispatch({ type: SYNC_ITEMS, payload: true });
-            log('syncOfflineData started');
-            const offlineItems = JSON.parse(value);
-            log('syncOfflineData ', offlineItems);
-            for (const item of offlineItems) {
-                try {
-                    log('syncOfflineData item', item);
+    //         dispatch({ type: SYNC_ITEMS, payload: true });
+    //         log('syncOfflineData started');
+    //         const offlineItems = JSON.parse(value);
+    //         log('syncOfflineData ', offlineItems);
+    //         for (const item of offlineItems) {
+    //             try {
+    //                 log('syncOfflineData item', item);
 
 
-                    if(item._id && !item._id.startsWith('TEMP')) {
-                        await updateIceCream(token, item);
-                    } else {
-                        const added_item = await createIceCream(token, { ...item, _id: undefined });
-                        dispatch({ type: PERMANENT_ITEM_ID, payload: { new_item: added_item, temp_id: item._id} });
-                    }
+    //                 if(item._id && !item._id.startsWith('TEMP')) {
+    //                     await updateIceCream(token, item);
+    //                 } else {
+    //                     const added_item = await createIceCream(token, { ...item, _id: undefined });
+    //                     dispatch({ type: PERMANENT_ITEM_ID, payload: { new_item: added_item, temp_id: item._id} });
+    //                 }
 
-                    // remove item from offline
-                    const index = offlineItems.findIndex((it: IceCreamProps) => it._id === item._id);
-                    offlineItems.splice(index, 1);
+    //                 // remove item from offline
+    //                 const index = offlineItems.findIndex((it: IceCreamProps) => it._id === item._id);
+    //                 offlineItems.splice(index, 1);
 
-                    // dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item } });
-                } catch (error) {
-                    log('syncOfflineData failed ', error);
-                    showToast('Failed to sync some items. They will remain offline.', 3000);
-                    dispatch({ type: SYNC_ITEMS, payload: false });
-                    return;
-                }
-            }
+    //                 // dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item } });
+    //             } catch (error) {
+    //                 log('syncOfflineData failed ', error);
+    //                 showToast('Failed to sync some items. They will remain offline.', 3000);
+    //                 dispatch({ type: SYNC_ITEMS, payload: false });
+    //                 return;
+    //             }
+    //         }
 
-            await Preferences.remove({ key: OFFLINE_ICECREAMS_KEY });
-            showToast('All offline items synced.', 3000);
-            dispatch({ type: SYNC_ITEMS, payload: false });
-        };
-    }, [isServerAvailable]) // TODO: instead of networkStatus change to connection to API
+    //         await Preferences.remove({ key: OFFLINE_ICECREAMS_KEY });
+    //         showToast('All offline items synced.', 3000);
+    //         dispatch({ type: SYNC_ITEMS, payload: false });
+    //     };
+    // }, [isServerAvailable]) // TODO: instead of networkStatus change to connection to API
 
-    const saveItem = useCallback<SaveItemFn>(saveIceCreamCallback, [isServerAvailable, Preferences]);
+    const saveItem = useCallback<SaveItemFn>(saveIceCreamCallback, [Preferences]);
     
     const fetchIceCreams = useCallback<FetchIceCreamsFn>(fetchIceCreamsCallBack, [token]);
 
     const value = { items, fetching, fetchingError, fetchedPages, hasNextPage, saving, savingError, saveItem, editing, setEditing, syncing, fetchIceCreams };
 
-    
-    log('returns');
-
-    useEffect(() => {
-        if (!isServerAvailable) {
-            showToast('Server is not available', 3000);
-        } else {
-            showToast('Server is available', 3000);
-        }
-    }, [isServerAvailable]);
+    // useEffect(() => {
+    //     if (!isServerAvailable) {
+    //         showToast('Server is not available', 3000);
+    //     } else {
+    //         showToast('Server is available', 3000);
+    //     }
+    // }, [isServerAvailable]);
 
     return (
         <IceCreamContext.Provider value={value}>
@@ -239,6 +235,7 @@ export const IceCreamProvider: React.FC<IceCreamProviderProps> = ({ children }) 
             dispatch({ type: SAVE_ITEM_SUCCEEDED, payload: { item } });
             await Preferences.set({ key: OFFLINE_ICECREAMS_KEY, value: JSON.stringify(offlineItems) });
         }
+        
         try {
             log('saveIceCream started');
             dispatch({ type: SAVE_ITEM_STARTED });

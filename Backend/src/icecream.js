@@ -1,6 +1,10 @@
 import Router from 'koa-router';
 import dataStore from 'nedb-promise';
 import { broadcast } from './wss.js';
+import { fileURLToPath } from 'url';
+import { koaBody } from 'koa-body';
+import fs from 'fs';
+import path from 'path';
 
 export class IceCreamStore {
     constructor({ filename, autoload }) {
@@ -34,6 +38,87 @@ export class IceCreamStore {
 const iceCreamStore = new IceCreamStore({ filename: './db/icecreams.json', autoload: true });
 
 export const iceCreamRouter = new Router();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const myKoaBody = koaBody({
+    multipart: true,
+    formidable: {
+        uploadDir: path.join(__dirname, 'uploads'),
+        keepExtensions: true,
+        onFileBegin: (name, file) => {
+            if (file && file.originalFilename) {
+                // Define a valid path where you want to store the uploaded file
+                const uploadDir = path.join(__dirname, 'uploads');
+                if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir); // Ensure directory exists
+
+                file.filepath = path.join(uploadDir, file.originalFilename); // Set a path for the file
+            } else {
+                throw new Error("File path or filename is undefined");
+            }
+        }
+    }
+});
+
+iceCreamRouter.post('/upload-photo/:id', myKoaBody, async (ctx) => {
+    try {
+        // console.log('Uploading photo for ice cream:', ctx.params.id);
+        console.log('Uploaded files:', ctx.request.files);
+        const file = ctx.request.files?.file;
+        const iceCreamId = ctx.params.id;
+        console.log('Uploaded file:', file);
+        if (!file) {
+            ctx.throw(400, 'No file uploaded');
+        }
+
+        const photoUrl = `http://localhost:3000/api/icecreams/images/${path.basename(file.filepath)}`;
+        console.log('Uploaded file:', photoUrl);
+
+        // Update the ice cream entity with the new photoUrl
+        const iceCream = await iceCreamStore.findOne({ _id: iceCreamId });
+        if (!iceCream) {
+            ctx.throw(404, 'Ice cream not found');
+        }
+
+        iceCream.photoUrlBE = photoUrl;
+        await iceCreamStore.update({ _id: iceCreamId }, iceCream);
+
+        // Respond with the URL of the uploaded photo
+        ctx.body = { photoUrl };
+        ctx.status = 200;
+
+        // Optionally, broadcast the updated ice cream data
+        const userId = ctx.state.user._id;
+        broadcast(userId, { event: 'updated', payload: iceCream });
+
+    } catch (error) {
+        ctx.status = 500;
+        ctx.body = { message: 'Error uploading photo', error: error.message };
+    }
+});
+
+iceCreamRouter.get('/images/:imageName', async (ctx) => {
+    const { imageName } = ctx.params;  // Get the image name from the URL params
+    const imagePath = path.join(__dirname, 'uploads', imageName);  // Path to the image in your uploads folder
+
+    try {
+        // Check if the file exists
+        if (fs.existsSync(imagePath)) {
+            // Set the appropriate headers for image serving
+            ctx.type = path.extname(imageName);  // Set the file type (jpg, png, etc.)
+            ctx.body = fs.createReadStream(imagePath);  // Stream the file to the response
+        } else {
+            // If the file is not found, send a 404 error
+            ctx.status = 404;
+            ctx.body = 'Image not found';
+        }
+    } catch (err) {
+        // If there’s an error while reading the file
+        ctx.status = 500;
+        ctx.body = 'Server Error';
+    }
+});
 
 iceCreamRouter.get('/', async (ctx) => {
     const userId = ctx.state.user._id;
