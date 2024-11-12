@@ -1,12 +1,15 @@
 import React, { useContext, useEffect, useRef, useState } from 'react';
-import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonSpinner, IonLoading, IonFab, IonFabButton, IonIcon, IonInfiniteScroll, IonInfiniteScrollContent } from '@ionic/react';
-import { add, logOut } from 'ionicons/icons';
+import { IonPage, IonHeader, IonToolbar, IonTitle, IonContent, IonList, IonItem, IonLabel, IonSpinner, IonLoading, IonFab, IonFabButton, IonIcon, IonInfiniteScroll, IonInfiniteScrollContent, IonModal, IonButton, createAnimation } from '@ionic/react';
+import { add, logOut, map } from 'ionicons/icons';
 import { getLogger } from '../core';
 import { RouteComponentProps } from 'react-router';
 import { IceCreamContext } from '../state/IceCreamProvider';
 import IceCream from './IceCream';
 import { AuthContext } from '../auth/AuthProvider';
 import { useNetwork } from '../state/useNetwork';
+import MyMap from '../components/MyMap';
+import { useMyLocation } from '../state/useMyLocation';
+import { enterAnimation, leaveAnimation } from '../utils/modalAnimations';
 // import { useServerStatus } from '../state/useServerStatus';
 const log = getLogger('IceCreamsList');
 
@@ -25,7 +28,42 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
     const [pageSize, setPageSize] = useState(10);
     const fetchInProgressRef = useRef(false);
 
+    const [showMapModal, setShowMapModal] = useState(false);
+
+    const myLocation = useMyLocation();
+    const { latitude: lat, longitude: lng } = myLocation.position?.coords || {}
     useEffect(getIceCreamsEffect, [token]);
+
+    const titleRef = useRef<HTMLIonTitleElement>(null);
+    const networkTitleRef = useRef<HTMLIonTitleElement>(null);
+
+    useEffect(() => {
+        if (titleRef.current) {
+            const animation = createAnimation()
+                .addElement(titleRef.current)
+                .duration(1000)
+                .fromTo('opacity', '0', '1')
+                .fromTo('transform', 'translateX(150px)', 'translateX(0px)')
+                .fromTo('color', 'red', 'white')
+                .easing('ease-out');
+
+            animation.play();
+        }
+    }, [titleRef.current]);
+
+    useEffect(() => {
+        if (networkTitleRef.current) {
+            const animation = createAnimation()
+                .addElement(networkTitleRef.current)
+                .duration(1000)
+                .fromTo('opacity', '0', '1')
+                .fromTo('transform', 'translateX(-150px)', 'translateX(0px)')
+                .fromTo('color', 'cyan', 'white')
+                .easing('ease-out');
+
+            animation.play();
+        }
+    }, [networkTitleRef.current]);
 
     const loadMoreData = async (event: CustomEvent<void>) => {
         if (fetchIceCreams && !fetchInProgressRef.current && isServerAvailable) {
@@ -73,13 +111,33 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
         }
     }
 
+    const handleOpenMap = () => {
+        setShowMapModal(true);
+    };
+
+    const handleCloseMap = () => {
+        setShowMapModal(false);
+    };
+
+    const markers = items?.map(({ _id, name, coordinates }) => {
+        if (coordinates) {
+            return {
+                lat: coordinates?.lat,
+                lng: coordinates?.lng,
+                name: name,
+            }
+        }
+        return undefined;
+    }).filter(marker => marker !== undefined);
+
+
     log('render');
     return (
         <IonPage>
             <IonHeader>
                 <IonToolbar>
-                    <IonTitle>Your favourite icecream app!</IonTitle>
-                    <IonTitle slot="end">Network: {networkStatus.connected ? 'Online' : 'Offline'}</IonTitle>
+                    <IonTitle ref={titleRef}>Your favourite icecream app!</IonTitle>
+                    <IonTitle ref={networkTitleRef} slot="end">Network: {networkStatus.connected ? 'Online' : 'Offline'}</IonTitle>
                 </IonToolbar>
             </IonHeader>
             <IonContent>
@@ -103,11 +161,27 @@ const IceCreamsList: React.FC<RouteComponentProps> = ({ history }) => {
                         <IonIcon icon={logOut} />
                     </IonFabButton>
                 </IonFab>
+                {<IonFab vertical="bottom" horizontal="center" slot="fixed">
+                    <IonFabButton onClick={handleOpenMap}>
+                        <IonIcon icon={map} />
+                    </IonFabButton>
+                </IonFab>}
                 <IonFab vertical="bottom" horizontal="end" slot="fixed">
                     <IonFabButton onClick={() => history.push('/icecream')}>
                         <IonIcon icon={add} />
                     </IonFabButton>
                 </IonFab>
+                <IonModal isOpen={showMapModal} onDidDismiss={handleCloseMap} enterAnimation={enterAnimation} leaveAnimation={leaveAnimation}>
+                    <IonHeader>
+                        <IonToolbar>
+                            <IonTitle>Map of Ice Cream Locations</IonTitle>
+                            <IonButton slot="end" onClick={handleCloseMap}>Close</IonButton>
+                        </IonToolbar>
+                    </IonHeader>
+                    <IonContent>
+                        <MyMap markers={markers} readonly={true} onMapClick={undefined} />
+                    </IonContent>
+                </IonModal>
             </IonContent>
         </IonPage>
     );
