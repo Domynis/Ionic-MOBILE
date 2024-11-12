@@ -127,13 +127,13 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
     const handleMapClick = useCallback((e: { latLng: google.maps.LatLng }) => {
         log('handleMapClick', e);
         if (e.latLng === undefined) {
-            log('handleMapClick - e.latLng is undefined');
+            // log('handleMapClick - e.latLng is undefined');
             return;
         }
         const lat = e.latLng.lat();
         const lng = e.latLng.lng();
         setCoordinates({ lat, lng });
-        log('handleMapClick', { lat, lng });
+        // log('handleMapClick', { lat, lng });
     }, []);
 
     return (

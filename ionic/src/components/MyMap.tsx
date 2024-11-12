@@ -9,9 +9,11 @@ interface MyMapProps {
     lng?: number;
     onMapClick?: (e: any) => void,
     onMarkerClick?: (e: any) => void,
+    readonly?: boolean,
+    markers?: { lat: number, lng: number, name: string }[]
 }
 
-const MyMap: React.FC<MyMapProps> = React.memo(({ lat = fsegaCoordinates.lat, lng = fsegaCoordinates.lng, onMapClick, onMarkerClick }) => {
+const MyMap: React.FC<MyMapProps> = React.memo(({ lat = fsegaCoordinates.lat, lng = fsegaCoordinates.lng, onMapClick, onMarkerClick, readonly = false, markers }) => {
     const mapRef = useRef<HTMLElement>(null);
     const listenerSet = useRef(false);
     const mapInstance = useRef<GoogleMap>();
@@ -53,7 +55,21 @@ const MyMap: React.FC<MyMapProps> = React.memo(({ lat = fsegaCoordinates.lat, ln
             //     console.error('Error adding initial marker:', error);
             // }
 
-            if (onMapClick && !listenerSet.current) {
+            if(markers) {
+                mapInstance.current?.removeAllMapListeners();
+                // Add markers
+                markers.forEach(async ({ lat, lng, name }) => {
+                    try {
+                        const id = await mapInstance.current?.addMarker({
+                            coordinate: { lat, lng },
+                            title: name
+                        });
+                    } catch (error) {
+                        console.error('Error adding new marker:', error);
+                    }
+                });
+            }
+            if (!!onMapClick && !listenerSet.current && !readonly) {
                 listenerSet.current = true;
                 await mapInstance.current.setOnMapClickListener(async ({ latitude, longitude }) => {
                     // // console.log('Attempting to remove marker with id:', markerId);
@@ -88,7 +104,7 @@ const MyMap: React.FC<MyMapProps> = React.memo(({ lat = fsegaCoordinates.lat, ln
 
                     // Call the onMapClick callback with the new coordinates
                     const latLng = new google.maps.LatLng(latitude, longitude);
-                    console.log('onMapClick called with:', latitude, longitude, latLng);
+                    // console.log('onMapClick called with:', latitude, longitude, latLng);
                     onMapClick({ latLng });
                 });
             }
@@ -133,15 +149,17 @@ const MyMap: React.FC<MyMapProps> = React.memo(({ lat = fsegaCoordinates.lat, ln
             }
         };
 
-        updateMarker();
+        if (!readonly) {
+            updateMarker();
+        }
     }, [lat, lng]);
 
     return (
         <div className="component-wrapper">
             <capacitor-google-map ref={mapRef} style={{
                 display: 'block',
-                width: 300,
-                height: 400
+                width: '100%',
+                height: 500
             }}></capacitor-google-map>
         </div>
     );
