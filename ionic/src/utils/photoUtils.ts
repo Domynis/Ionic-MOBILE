@@ -57,36 +57,32 @@ export interface MyPhoto {
 }
 
 export async function getWebviewPathFromFilesystem(filepath: string, fileFormat: string = "jpeg"): Promise<string | undefined> {
-    try {
-        // Read the file content to convert to a base64 data URL for the image
-        const result = await Filesystem.readFile({
-            path: filepath,
-            directory: Directory.Data,
-        });
-
+    // Read the file content to convert to a base64 data URL for the image
+    return await Filesystem.readFile({
+        path: filepath,
+        directory: Directory.Data,
+    }).then((result) => {
         // Convert the file content to a data URL to display in a webview
         const base64Data = result.data;
         return `data:image/` + fileFormat + `;base64,${base64Data}`;
-    } catch (error) {
-        // console.error('Error reading file from filesystem', error);
+    }).catch((error) => {
+        console.error('Error reading file from filesystem', error);
         return undefined;
-    }
+    });
 }
 
 export const getImageBlobUrl = async (url: string, token: string) => {
-    try {
-        const response = await axios.get(url, {
-            headers: {
-                Authorization: `Bearer ${token}`
-            },
-            responseType: 'blob'
-        });
-
+    return await axios.get(url, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        },
+        responseType: 'blob'
+    }).then((response) => {
         return URL.createObjectURL(response.data);
-    } catch (error) {
+    }).catch((error) => {
         console.error("Error fetching image with token:", error);
         return undefined;
-    }
+    });
 };
 
 export async function getWebviewPath(photoUrl: string, photoUrlBE: string | undefined, token: string) {

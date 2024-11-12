@@ -7,6 +7,9 @@ import { IonActionSheet, IonButton, IonButtons, IonCheckbox, IonContent, IonHead
 import { AuthContext } from "../auth/AuthProvider";
 import { takePhoto, MyPhoto, getWebviewPathFromFilesystem, getImageBlobUrl, getWebviewPath } from "../utils/photoUtils";
 import { uploadIceCreamPhoto } from "../state/iceCreamApi";
+import { useMyLocation } from "../state/useMyLocation";
+import MyMap from "../components/MyMap";
+import { fsegaCoordinates } from "../utils/mapsApiKey";
 
 const log = getLogger('IceCreamEdit');
 
@@ -23,8 +26,12 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
     const [tasty, setTasty] = useState(false);
     const [icecream, setIceCream] = useState<IceCreamProps>();
     const [photo, setPhoto] = useState<MyPhoto>();
+    const [coordinates, setCoordinates] = useState<{ lat: number, lng: number } | null>(null);
     const [showActionSheet, setShowActionSheet] = useState(false);
+    const [showMap, setShowMap] = useState(false);
 
+    // const myLocation = useMyLocation();
+    // const { latitude: lat, longitude: lng } = myLocation.position?.coords || {}
 
     // useEffect(() => {
     //     setEditing && setEditing(true);
@@ -51,11 +58,18 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
                 if (item.tasty) {
                     setTasty(item.tasty);
                 }
+
+                log('useEffect - item coordinates', item.coordinates);
+                if (item.coordinates) {
+                    setCoordinates(item.coordinates);
+                    setShowMap(true);
+                }
+
                 if (item.photoUrl) {
                     log('useEffect - photoUrl', item.photoUrl);
                     // const webviewPath = !item.photoUrl.includes("http") ? await getWebviewPathFromFilesystem(item.photoUrl, "jpeg") :
                     //     await getImageBlobUrl(item.photoUrl, token);
-                    
+
                     const webviewPath = await getWebviewPath(item.photoUrl, item.photoUrlBE, token);
                     setPhoto({
                         filepath: item.photoUrl,
@@ -81,12 +95,12 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
             return;
         };
         const photoUrl = photo?.filepath;
-        const editedIceCream = { ...icecream, name, description, price, tasty, photoUrl };
+        const editedIceCream = { ...icecream, name, description, price, coordinates, tasty, photoUrl };
         log('handleSave', editedIceCream);
         saveItem && saveItem(token, editedIceCream).then(() => {
             history.goBack();
         });
-    }, [icecream, saveItem, name, description, price, tasty, photo, history]);
+    }, [icecream, saveItem, name, description, price, coordinates, tasty, photo, history]);
 
     const handleUpload = useCallback(async () => {
         if (photo && icecream) {
@@ -108,7 +122,20 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
                 alert('Failed to upload photo');
             }
         }
-    }, [icecream, photo]);
+    }, [token, icecream, photo]);
+
+    const handleMapClick = useCallback((e: { latLng: google.maps.LatLng }) => {
+        log('handleMapClick', e);
+        if (e.latLng === undefined) {
+            log('handleMapClick - e.latLng is undefined');
+            return;
+        }
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
+        setCoordinates({ lat, lng });
+        log('handleMapClick', { lat, lng });
+    }, []);
+
     return (
         <IonPage>
             <IonHeader>
@@ -148,6 +175,13 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
                         />
                     </>
                 )}
+
+                <IonButton onClick={() => setShowMap(true)} >Open Map</IonButton>
+                {((coordinates?.lat && coordinates?.lng) || showMap) && <MyMap
+                    lat={coordinates?.lat}
+                    lng={coordinates?.lng}
+                    onMapClick={handleMapClick}
+                />}
                 <IonLoading isOpen={saving} />
                 {savingError && (
                     <div>{savingError.message || 'Failed to save item!'}</div>

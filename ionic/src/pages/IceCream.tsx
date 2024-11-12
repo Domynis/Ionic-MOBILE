@@ -11,7 +11,7 @@ interface IceCreamPropsExt extends IceCreamProps {
     onEdit: (id?: string) => void;
 }
 
-const IceCream: React.FC<IceCreamPropsExt> = ({ _id: id, name, description, price, tasty, photoUrl, photoUrlBE, onEdit }) => {
+const IceCream: React.FC<IceCreamPropsExt> = ({ _id: id, name, description, price, tasty, photoUrl, photoUrlBE, coordinates, onEdit }) => {
 
     const [photoWebviewPath, setPhotoWebviewPath] = useState<string>("https://via.placeholder.com/150");
     const { token } = useContext(AuthContext);
