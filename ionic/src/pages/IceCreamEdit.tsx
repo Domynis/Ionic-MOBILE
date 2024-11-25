@@ -10,6 +10,7 @@ import { uploadIceCreamPhoto } from "../state/iceCreamApi";
 import { useMyLocation } from "../state/useMyLocation";
 import MyMap from "../components/MyMap";
 import { fsegaCoordinates } from "../utils/mapsApiKey";
+import {cloud, cloudCircle} from "ionicons/icons";
 
 const log = getLogger('IceCreamEdit');
 
@@ -168,7 +169,7 @@ const IceCreamEdit: React.FC<IceCreamEditProps> = ({ history, match }) => {
                                 {
                                     text: 'Upload',
                                     role: 'selected',
-                                    icon: 'cloud-upload-outline',
+                                    icon: cloudCircle,
                                     handler: handleUpload
                                 }
                             ]}
